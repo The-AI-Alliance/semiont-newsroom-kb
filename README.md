@@ -36,11 +36,11 @@ This repo ships twelve skills that build a layered investigation KB on top of th
 
 Explore this dataset using [Semiont](https://github.com/The-AI-Alliance/semiont), an open-source knowledge base platform for annotation and knowledge extraction.
 
-This repo follows the same layout and startup flow as [`semiont-template-kb`](https://github.com/The-AI-Alliance/semiont-template-kb). See its README for full setup instructions:
+This repo follows the same layout and startup flow as [`semiont-template-kb`](https://github.com/The-AI-Alliance/semiont-newsroom-kb). See its README for full setup instructions:
 
-- [Quick Start: Local](https://github.com/The-AI-Alliance/semiont-template-kb#quick-start-local)
-- [Quick Start: Codespaces](https://github.com/The-AI-Alliance/semiont-template-kb#quick-start-codespaces)
-- [Inference Configuration](https://github.com/The-AI-Alliance/semiont-template-kb#inference-configuration)
+- [Quick Start: Local](https://github.com/The-AI-Alliance/semiont-newsroom-kb#quick-start-local)
+- [Quick Start: Codespaces](https://github.com/The-AI-Alliance/semiont-newsroom-kb#quick-start-codespaces)
+- [Inference Configuration](https://github.com/The-AI-Alliance/semiont-newsroom-kb#inference-configuration)
 
 ### Open in Codespaces
 
@@ -54,7 +54,7 @@ gh codespace ports forward 4000:4000
 gh codespace ssh -- cat .devcontainer/admin.json
 ```
 
-The credentials let you log in via the Semiont browser — see [Quick Start: Codespaces](https://github.com/The-AI-Alliance/semiont-template-kb#quick-start-codespaces) on the template-kb README for the full browser-side flow.
+The credentials let you log in via the Semiont browser — see [Quick Start: Codespaces](https://github.com/The-AI-Alliance/semiont-newsroom-kb#quick-start-codespaces) on the template-kb README for the full browser-side flow.
 
 ## License
 
