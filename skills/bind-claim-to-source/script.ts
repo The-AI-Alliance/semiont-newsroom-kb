@@ -1,0 +1,126 @@
+/**
+ * bind-claim-to-source — wire each Claim to its supporting source resource.
+ *
+ * Usage: tsx skills/bind-claim-to-source/script.ts [--interactive]
+ */
+
+import { SemiontClient, resourceId as ridBrand, type ResourceId } from '@semiont/sdk';
+import { confirm, close as closeInteractive } from '../../src/interactive.js';
+
+function getMediaType(r: any): string | undefined {
+  const reps = Array.isArray(r.representations)
+    ? r.representations
+    : r.representations
+      ? [r.representations]
+      : [];
+  return reps[0]?.mediaType;
+}
+
+async function main(): Promise<void> {
+  const semiont = await SemiontClient.signInHttp({
+    baseUrl: process.env.SEMIONT_API_URL ?? 'http://localhost:4000',
+    email: process.env.SEMIONT_USER_EMAIL!,
+    password: process.env.SEMIONT_USER_PASSWORD!,
+  });
+
+  const all = await semiont.browse.resources({ limit: 2000 });
+  const claims = all.filter((r) => {
+    const types: string[] = (r as any).entityTypes ?? [];
+    return types.includes('Claim');
+  });
+
+  if (claims.length === 0) {
+    console.log('No Claim resources found. Run skills/extract-claims/script.ts first.');
+    semiont.dispose();
+    closeInteractive();
+    return;
+  }
+
+  console.log(`Will wire source edges for ${claims.length} Claim resource(s).`);
+  const proceed = await confirm('Proceed?', true);
+  if (!proceed) {
+    semiont.dispose();
+    closeInteractive();
+    return;
+  }
+
+  // Build a map of canonical resource by source annotation rId — for each
+  // Claim, we look for source-typed annotations on the source document and
+  // find the bound canonical resources around them.
+  let edgesAdded = 0;
+  for (const claim of claims) {
+    const claimId = ridBrand(claim['@id']);
+    // The Claim was synthesized via yield.fromAnnotation — its source annotation
+    // lives in the document, and the binding makes it queryable in reverse.
+    // Find annotations whose body has a SpecificResource pointing at this Claim.
+    let foundSourceTypes: string[] = [];
+    let foundBoundCanonicals: string[] = [];
+
+    for (const r of all) {
+      const mt = getMediaType(r);
+      if (mt !== 'text/markdown' && mt !== 'text/plain') continue;
+      const rId = ridBrand(r['@id']);
+      const annotations = await semiont.browse.annotations(rId);
+      for (const ann of annotations) {
+        const targets = (ann.body ?? []).filter(
+          (b: any) => b.type === 'SpecificResource' && b.purpose === 'linking',
+        );
+        const bindsToClaim = targets.some((b: any) => b.source === claim['@id']);
+        if (!bindsToClaim) continue;
+
+        const tags = (ann.body ?? [])
+          .filter((b: any) => b.type === 'TextualBody' && b.purpose === 'tagging')
+          .flatMap((b: any) => (Array.isArray(b.value) ? b.value : [b.value]));
+        for (const t of tags) {
+          if (typeof t === 'string' && t.startsWith('SourceType_')) foundSourceTypes.push(t);
+        }
+
+        // Look at all other annotations on this same resource — the canonical
+        // people / orgs / docs visible nearby become the supporting sources.
+        for (const other of annotations) {
+          if (other.id === ann.id) continue;
+          const otherTargets = (other.body ?? []).filter(
+            (b: any) => b.type === 'SpecificResource' && b.purpose === 'linking',
+          );
+          for (const t of otherTargets) {
+            const targetRes = all.find((x) => x['@id'] === (t as any).source);
+            const targetTypes: string[] = (targetRes as any)?.entityTypes ?? [];
+            if (
+              targetTypes.includes('Person') ||
+              targetTypes.includes('Organization') ||
+              targetTypes.includes('Agency') ||
+              targetTypes.includes('Document')
+            ) {
+              foundBoundCanonicals.push((t as any).source);
+            }
+          }
+        }
+      }
+    }
+
+    // Dedup and add edges from the Claim resource
+    const uniq = [...new Set(foundBoundCanonicals)];
+    for (const sourceId of uniq) {
+      await semiont.mark.annotation({
+        target: { source: claimId },
+        motivation: 'linking',
+        body: [
+          { type: 'SpecificResource', source: sourceId, purpose: 'linking' },
+          { type: 'TextualBody', purpose: 'tagging', value: ['supports'] },
+        ],
+      });
+      edgesAdded++;
+    }
+    const sourceTypeNote = [...new Set(foundSourceTypes)].join(', ') || 'unknown';
+    console.log(`  Claim ${claimId}: ${uniq.length} source edges (source-type: ${sourceTypeNote})`);
+  }
+
+  console.log(`\nDone. Added ${edgesAdded} Claim → Source edges.`);
+  semiont.dispose();
+  closeInteractive();
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
