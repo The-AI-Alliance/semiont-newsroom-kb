@@ -56,13 +56,24 @@ async function main(): Promise<void> {
     const topics: AnnoSpan[] = [];
     const sourceTypes: AnnoSpan[] = [];
     for (const ann of annos) {
-      const tags = (ann.body ?? [])
+      const bodies = Array.isArray(ann.body) ? ann.body : ann.body ? [ann.body] : [];
+      const tags = bodies
         .filter((b: any) => b.type === 'TextualBody' && b.purpose === 'tagging')
         .flatMap((b: any) => (Array.isArray(b.value) ? b.value : [b.value])) as string[];
       const span = parseSpan(ann);
       if (!span) continue;
       if (tags.includes('Topic')) {
-        const exact = (ann.target?.selector?.exact ?? '') as string;
+        const target = ann.target;
+        const selectors =
+          typeof target === 'string' || !target.selector
+            ? []
+            : Array.isArray(target.selector)
+              ? target.selector
+              : [target.selector];
+        let exact = '';
+        for (const s of selectors) {
+          if (s.type === 'TextQuoteSelector') { exact = s.exact; break; }
+        }
         topics.push({ rId, ...span, tags: [exact || 'unknown-topic'] });
       }
       const st = tags.find((t) => t.startsWith('SourceType_'));
@@ -78,6 +89,7 @@ async function main(): Promise<void> {
     const sources = sourceTypeSpans.get(rId) ?? [];
     for (const topic of topics) {
       const topicLabel = topic.tags[0];
+      if (!topicLabel) continue;
       if (!counts.has(topicLabel))
         counts.set(topicLabel, {
           SourceType_Named: 0,
@@ -90,9 +102,11 @@ async function main(): Promise<void> {
       // since topic spans tend to be paragraph-level
       const margin = 200;
       for (const src of sources) {
+        const srcLabel = src.tags[0];
+        if (!srcLabel) continue;
         const overlap =
           src.start <= topic.end + margin && src.end >= topic.start - margin && src.rId === topic.rId;
-        if (overlap) slot[src.tags[0]] = (slot[src.tags[0]] ?? 0) + 1;
+        if (overlap) slot[srcLabel] = (slot[srcLabel] ?? 0) + 1;
       }
     }
   }

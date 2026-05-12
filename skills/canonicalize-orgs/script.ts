@@ -61,19 +61,31 @@ async function main(): Promise<void> {
     const annotations = await semiont.browse.annotations(rId);
     for (const ann of annotations) {
       if (ann.motivation !== 'linking') continue;
-      const tags = (ann.body ?? [])
+      const bodies = Array.isArray(ann.body) ? ann.body : ann.body ? [ann.body] : [];
+      const tags = bodies
         .filter((b: any) => b.type === 'TextualBody' && b.purpose === 'tagging')
         .flatMap((b: any) => (Array.isArray(b.value) ? b.value : [b.value]));
       const isOrg = tags.includes('Organization');
       const isAgency = tags.includes('Agency');
       if (!isOrg && !isAgency) continue;
-      const alreadyBound = (ann.body ?? []).some(
+      const alreadyBound = bodies.some(
         (b: any) => b.type === 'SpecificResource' && b.purpose === 'linking',
       );
+      const target = ann.target;
+      const selectors =
+        typeof target === 'string' || !target.selector
+          ? []
+          : Array.isArray(target.selector)
+            ? target.selector
+            : [target.selector];
+      let text = '';
+      for (const s of selectors) {
+        if (s.type === 'TextQuoteSelector') { text = s.exact; break; }
+      }
       orgAnnos.push({
         rId,
         annId: ann.id,
-        text: ann.target?.selector?.exact ?? '',
+        text,
         isAgency,
         alreadyBound,
       });
@@ -114,7 +126,9 @@ async function main(): Promise<void> {
   let synthesized = 0;
   for (const [key, anns] of clusters) {
     const sample = anns[0];
+    if (!sample) continue;
     const gather = await semiont.gather.annotation(sample.rId, sample.annId, { contextWindow: 1200 });
+    if (!('response' in gather)) continue;
     const context = gather.response as GatheredContext;
     const matchResult = await semiont.match.search(sample.rId, sample.annId, context, {
       limit: 5,
@@ -146,7 +160,9 @@ async function main(): Promise<void> {
         storageUri: `file://generated/${isAgency ? 'agency' : 'org'}-${slugify(key)}.md`,
         context,
         entityTypes,
-        appendBody: externalRefs,
+        prompt: externalRefs
+          ? `Include this references section at the end of the body verbatim:\n\n${externalRefs}`
+          : undefined,
       });
       if (yieldEvent.kind !== 'complete') continue;
       const newResourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;

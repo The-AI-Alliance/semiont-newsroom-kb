@@ -72,12 +72,23 @@ async function main(): Promise<void> {
     const annotations = await semiont.browse.annotations(rId);
     for (const ann of annotations) {
       if (ann.motivation !== 'linking') continue;
-      const tags = (ann.body ?? [])
+      const bodies = Array.isArray(ann.body) ? ann.body : ann.body ? [ann.body] : [];
+      const tags = bodies
         .filter((b: any) => b.type === 'TextualBody' && b.purpose === 'tagging')
         .flatMap((b: any) => (Array.isArray(b.value) ? b.value : [b.value]));
       const sourceType = tags.find((t: string) => SOURCE_TYPE_TAGS.has(t));
       if (!sourceType) continue;
-      const exact = (ann.target?.selector?.exact ?? '') as string;
+      const target = ann.target;
+      const selectors =
+        typeof target === 'string' || !target.selector
+          ? []
+          : Array.isArray(target.selector)
+            ? target.selector
+            : [target.selector];
+      let exact = '';
+      for (const s of selectors) {
+        if (s.type === 'TextQuoteSelector') { exact = s.exact; break; }
+      }
       if (exact.length < MIN_CLAIM_LENGTH) continue;
       claims.push({ rId, annId: ann.id, text: exact, sourceType });
     }
@@ -101,6 +112,7 @@ async function main(): Promise<void> {
   let synthesized = 0;
   for (const c of claims) {
     const gather = await semiont.gather.annotation(c.rId, c.annId, { contextWindow: 1500 });
+    if (!('response' in gather)) continue;
     const context = gather.response as GatheredContext;
 
     const yieldEvent = await semiont.yield.fromAnnotation(c.rId, c.annId, {
@@ -108,7 +120,7 @@ async function main(): Promise<void> {
       storageUri: `file://generated/claim-${slugify(c.text)}.md`,
       context,
       entityTypes: ['Claim', 'Aggregate'],
-      instructions: CLAIM_INSTRUCTIONS,
+      prompt: CLAIM_INSTRUCTIONS,
     });
     if (yieldEvent.kind !== 'complete') continue;
     const newResourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;

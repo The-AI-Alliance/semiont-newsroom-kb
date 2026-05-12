@@ -78,6 +78,12 @@ async function main(): Promise<void> {
   const gather = await semiont.gather.annotation(ridBrand(investigation['@id']), seed.id, {
     contextWindow: 2500,
   });
+  if (!('response' in gather)) {
+    console.error('gather.annotation did not return a Complete event');
+    semiont.dispose();
+    closeInteractive();
+    return;
+  }
   const context = gather.response as GatheredContext;
 
   // Build a manifest of FactChecks for the prompt to reference
@@ -95,8 +101,7 @@ async function main(): Promise<void> {
     storageUri: `file://generated/draft-${slugify((investigation as any).name)}.md`,
     context,
     entityTypes: ['DraftArticle', 'Aggregate'],
-    instructions: DRAFT_INSTRUCTIONS,
-    prependBody: prepend,
+    prompt: `${DRAFT_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
   });
   if (yieldEvent.kind !== 'complete') {
     console.error(`yield.fromAnnotation did not complete: ${yieldEvent.kind}`);

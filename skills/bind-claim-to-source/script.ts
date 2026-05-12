@@ -62,13 +62,14 @@ async function main(): Promise<void> {
       const rId = ridBrand(r['@id']);
       const annotations = await semiont.browse.annotations(rId);
       for (const ann of annotations) {
-        const targets = (ann.body ?? []).filter(
+        const annBodies = Array.isArray(ann.body) ? ann.body : ann.body ? [ann.body] : [];
+        const targets = annBodies.filter(
           (b: any) => b.type === 'SpecificResource' && b.purpose === 'linking',
         );
         const bindsToClaim = targets.some((b: any) => b.source === claim['@id']);
         if (!bindsToClaim) continue;
 
-        const tags = (ann.body ?? [])
+        const tags = annBodies
           .filter((b: any) => b.type === 'TextualBody' && b.purpose === 'tagging')
           .flatMap((b: any) => (Array.isArray(b.value) ? b.value : [b.value]));
         for (const t of tags) {
@@ -79,7 +80,8 @@ async function main(): Promise<void> {
         // people / orgs / docs visible nearby become the supporting sources.
         for (const other of annotations) {
           if (other.id === ann.id) continue;
-          const otherTargets = (other.body ?? []).filter(
+          const otherBodies = Array.isArray(other.body) ? other.body : other.body ? [other.body] : [];
+          const otherTargets = otherBodies.filter(
             (b: any) => b.type === 'SpecificResource' && b.purpose === 'linking',
           );
           for (const t of otherTargets) {
@@ -98,15 +100,21 @@ async function main(): Promise<void> {
       }
     }
 
-    // Dedup and add edges from the Claim resource
+    // Dedup and add edges from the Claim resource. The selector field is
+    // required by the SDK schema, but these are resource-level relationship
+    // edges — there's no span to point at. Use a FragmentSelector with an
+    // empty value to satisfy the type while signalling "whole resource."
     const uniq = [...new Set(foundBoundCanonicals)];
     for (const sourceId of uniq) {
       await semiont.mark.annotation({
-        target: { source: claimId },
+        target: {
+          source: claimId,
+          selector: { type: 'FragmentSelector', value: '' },
+        },
         motivation: 'linking',
         body: [
           { type: 'SpecificResource', source: sourceId, purpose: 'linking' },
-          { type: 'TextualBody', purpose: 'tagging', value: ['supports'] },
+          { type: 'TextualBody', purpose: 'tagging', value: 'supports' },
         ],
       });
       edgesAdded++;

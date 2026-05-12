@@ -76,23 +76,26 @@ async function main(): Promise<void> {
     }
 
     const gather = await semiont.gather.annotation(claimId, seed.id, { contextWindow: 1500 });
+    if (!('response' in gather)) continue;
     const context = gather.response as GatheredContext;
 
     // Find all source-edges from this Claim
     const supports = annos
-      .filter((a: any) =>
-        (a.body ?? []).some(
+      .filter((a: any) => {
+        const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
+        return bodies.some(
           (b: any) =>
             b.type === 'TextualBody' &&
             b.purpose === 'tagging' &&
             (Array.isArray(b.value) ? b.value : [b.value]).includes('supports'),
-        ),
-      )
-      .flatMap((a: any) =>
-        (a.body ?? [])
+        );
+      })
+      .flatMap((a: any) => {
+        const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
+        return bodies
           .filter((b: any) => b.type === 'SpecificResource' && b.purpose === 'linking')
-          .map((b: any) => b.source as string),
-      );
+          .map((b: any) => b.source as string);
+      });
 
     const sourceList = supports
       .map((id) => {
@@ -110,8 +113,7 @@ async function main(): Promise<void> {
       storageUri: `file://generated/fact-check-${slugify(claimName)}.md`,
       context,
       entityTypes: ['FactCheck', 'Aggregate'],
-      instructions: FACT_CHECK_INSTRUCTIONS,
-      prependBody: prepend,
+      prompt: `${FACT_CHECK_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
     });
     if (yieldEvent.kind !== 'complete') continue;
     const newResourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;
