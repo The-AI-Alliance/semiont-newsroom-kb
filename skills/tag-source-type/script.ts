@@ -13,6 +13,7 @@
 
 import { SemiontClient, entityType, resourceId as ridBrand, type ResourceId } from '@semiont/sdk';
 import { confirm, close as closeInteractive } from '../../src/interactive.js';
+import { createdCount } from '../../src/mark-result.js';
 
 const SOURCE_ENTITY_TYPES = [
   entityType('SourceType_Named'),
@@ -85,7 +86,7 @@ async function main(): Promise<void> {
       entityTypes: SOURCE_ENTITY_TYPES,
       instructions: SOURCE_INSTRUCTIONS,
     });
-    const n = progress.progress?.createdCount ?? 0;
+    const n = createdCount(progress);
     total += n;
     console.log(`  ${rId}: ${n} source-type annotations`);
   }

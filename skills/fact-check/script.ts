@@ -75,7 +75,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const gather = await semiont.gather.annotation(seed.id, claimId, { contextWindow: 1500 });
+    const gather = await semiont.gather.annotation(claimId, seed.id, { contextWindow: 1500 });
     const context = gather.response as GatheredContext;
 
     // Find all source-edges from this Claim

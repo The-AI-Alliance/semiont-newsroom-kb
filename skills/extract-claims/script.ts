@@ -100,7 +100,7 @@ async function main(): Promise<void> {
 
   let synthesized = 0;
   for (const c of claims) {
-    const gather = await semiont.gather.annotation(c.annId, c.rId, { contextWindow: 1500 });
+    const gather = await semiont.gather.annotation(c.rId, c.annId, { contextWindow: 1500 });
     const context = gather.response as GatheredContext;
 
     const yieldEvent = await semiont.yield.fromAnnotation(c.rId, c.annId, {

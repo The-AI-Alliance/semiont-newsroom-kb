@@ -75,7 +75,7 @@ async function main(): Promise<void> {
     closeInteractive();
     return;
   }
-  const gather = await semiont.gather.annotation(seed.id, ridBrand(investigation['@id']), {
+  const gather = await semiont.gather.annotation(ridBrand(investigation['@id']), seed.id, {
     contextWindow: 2500,
   });
   const context = gather.response as GatheredContext;

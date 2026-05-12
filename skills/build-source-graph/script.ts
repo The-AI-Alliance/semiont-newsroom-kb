@@ -4,8 +4,19 @@
  * Usage: tsx skills/build-source-graph/script.ts [--interactive]
  */
 
-import { SemiontClient, resourceId as ridBrand, type ResourceId } from '@semiont/sdk';
+import { SemiontClient, entityType, resourceId as ridBrand, type ResourceId } from '@semiont/sdk';
 import { confirm, close as closeInteractive } from '../../src/interactive.js';
+import { createdCount } from '../../src/mark-result.js';
+
+// mark.assist with motivation 'linking' requires a non-empty entityTypes
+// array (SDK validation). This relationship pass tags relationships
+// between named people / organizations; the entity-type list scopes the
+// LLM's expectation. Override with RELATIONSHIP_ENTITY_TYPES env var.
+const RELATIONSHIP_ENTITY_TYPES = (
+  process.env.RELATIONSHIP_ENTITY_TYPES ?? 'Person,Organization'
+)
+  .split(',')
+  .map((t) => entityType(t.trim()));
 
 const RELATIONSHIP_INSTRUCTIONS = `
 Identify passages where one source's claim relates to another's. For each such passage, tag it
@@ -59,9 +70,10 @@ async function main(): Promise<void> {
   let total = 0;
   for (const rId of targets) {
     const progress = await semiont.mark.assist(rId, 'linking', {
+      entityTypes: RELATIONSHIP_ENTITY_TYPES,
       instructions: RELATIONSHIP_INSTRUCTIONS,
     });
-    const n = progress.progress?.createdCount ?? 0;
+    const n = createdCount(progress);
     total += n;
     console.log(`  ${rId}: ${n} relationship annotations`);
   }

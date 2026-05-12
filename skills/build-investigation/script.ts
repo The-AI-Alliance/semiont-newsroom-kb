@@ -94,7 +94,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const gather = await semiont.gather.annotation(seedAnno.id, seedId, { contextWindow: 2000 });
+  const gather = await semiont.gather.annotation(seedId, seedAnno.id, { contextWindow: 2000 });
   const context = gather.response as GatheredContext;
 
   const claimList = claims.slice(0, 30).map((c) => `- ${(c as any).name} (\`${c['@id']}\`)`).join('\n');
