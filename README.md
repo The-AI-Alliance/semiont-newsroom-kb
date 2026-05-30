@@ -1,5 +1,9 @@
 # Newsroom Knowledge Base (Synthetic Documents)
 
+[![Lint](https://github.com/The-AI-Alliance/semiont-newsroom-kb/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/The-AI-Alliance/semiont-newsroom-kb/actions/workflows/lint.yml?query=branch%3Amain)
+[![Build](https://github.com/The-AI-Alliance/semiont-newsroom-kb/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/The-AI-Alliance/semiont-newsroom-kb/actions/workflows/build.yml?query=branch%3Amain)
+[![License](https://img.shields.io/github/license/The-AI-Alliance/semiont-newsroom-kb)](https://github.com/The-AI-Alliance/semiont-newsroom-kb/blob/main/LICENSE)
+
 A collection of **synthetic but realistic investigative-journalism documents** — interview transcripts, FOIA-style agency memos, public statements, official documents — formatted for demonstration of newsroom annotation, source-tracking, and fact-checking workflows with [Semiont](https://github.com/The-AI-Alliance/semiont).
 
 ## About This Dataset
