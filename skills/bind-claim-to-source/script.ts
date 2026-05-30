@@ -4,7 +4,7 @@
  * Usage: tsx skills/bind-claim-to-source/script.ts [--interactive]
  */
 
-import { SemiontClient, resourceId as ridBrand, type ResourceId } from '@semiont/sdk';
+import { SemiontSession, InMemorySessionStorage, resourceId as ridBrand, type KnowledgeBase, type ResourceId } from '@semiont/sdk';
 import { confirm, close as closeInteractive } from '../../src/interactive.js';
 
 function getMediaType(r: any): string | undefined {
@@ -17,11 +17,18 @@ function getMediaType(r: any): string | undefined {
 }
 
 async function main(): Promise<void> {
-  const semiont = await SemiontClient.signInHttp({
-    baseUrl: process.env.SEMIONT_API_URL ?? 'http://localhost:4000',
-    email: process.env.SEMIONT_USER_EMAIL!,
-    password: process.env.SEMIONT_USER_PASSWORD!,
-  });
+  const baseUrl = process.env.SEMIONT_API_URL ?? 'http://localhost:4000';
+  const email = process.env.SEMIONT_USER_EMAIL!;
+  const password = process.env.SEMIONT_USER_PASSWORD!;
+  const u = new URL(baseUrl);
+  const kb: KnowledgeBase = {
+    id: 'newsroom-bind-claim-to-source',
+    label: 'newsroom bind-claim-to-source',
+    email,
+    endpoint: { kind: 'http', host: u.hostname, port: Number(u.port) || 4000, protocol: u.protocol.replace(':', '') as 'http' | 'https' },
+  };
+  const session = await SemiontSession.signInHttp({ kb, storage: new InMemorySessionStorage(), baseUrl, email, password });
+  const semiont = session.client;
 
   const all = await semiont.browse.resources({ limit: 2000 });
   const claims = all.filter((r) => {
@@ -31,7 +38,7 @@ async function main(): Promise<void> {
 
   if (claims.length === 0) {
     console.log('No Claim resources found. Run skills/extract-claims/script.ts first.');
-    semiont.dispose();
+    await session.dispose();
     closeInteractive();
     return;
   }
@@ -39,7 +46,7 @@ async function main(): Promise<void> {
   console.log(`Will wire source edges for ${claims.length} Claim resource(s).`);
   const proceed = await confirm('Proceed?', true);
   if (!proceed) {
-    semiont.dispose();
+    await session.dispose();
     closeInteractive();
     return;
   }
@@ -124,7 +131,7 @@ async function main(): Promise<void> {
   }
 
   console.log(`\nDone. Added ${edgesAdded} Claim → Source edges.`);
-  semiont.dispose();
+  await session.dispose();
   closeInteractive();
 }
 

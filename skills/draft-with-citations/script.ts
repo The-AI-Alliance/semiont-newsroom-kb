@@ -6,7 +6,9 @@
  */
 
 import {
-  SemiontClient,
+  SemiontSession,
+  InMemorySessionStorage,
+  type KnowledgeBase,
   resourceId as ridBrand,
   type GatheredContext,
 } from '@semiont/sdk';
@@ -40,17 +42,24 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const semiont = await SemiontClient.signInHttp({
-    baseUrl: process.env.SEMIONT_API_URL ?? 'http://localhost:4000',
-    email: process.env.SEMIONT_USER_EMAIL!,
-    password: process.env.SEMIONT_USER_PASSWORD!,
-  });
+  const baseUrl = process.env.SEMIONT_API_URL ?? 'http://localhost:4000';
+  const email = process.env.SEMIONT_USER_EMAIL!;
+  const password = process.env.SEMIONT_USER_PASSWORD!;
+  const u = new URL(baseUrl);
+  const kb: KnowledgeBase = {
+    id: 'newsroom-draft-with-citations',
+    label: 'newsroom draft-with-citations',
+    email,
+    endpoint: { kind: 'http', host: u.hostname, port: Number(u.port) || 4000, protocol: u.protocol.replace(':', '') as 'http' | 'https' },
+  };
+  const session = await SemiontSession.signInHttp({ kb, storage: new InMemorySessionStorage(), baseUrl, email, password });
+  const semiont = session.client;
 
   const all = await semiont.browse.resources({ limit: 2000 });
   const investigation = all.find((r) => r['@id'] === investigationId);
   if (!investigation) {
     console.error(`Investigation ${investigationId} not found.`);
-    semiont.dispose();
+    await session.dispose();
     closeInteractive();
     return;
   }
@@ -61,7 +70,7 @@ async function main(): Promise<void> {
   });
   if (factChecks.length === 0) {
     console.error('No FactCheck resources. Run skills/fact-check/script.ts first.');
-    semiont.dispose();
+    await session.dispose();
     closeInteractive();
     return;
   }
@@ -71,7 +80,7 @@ async function main(): Promise<void> {
   const seed = annos[0];
   if (!seed) {
     console.error('Investigation has no annotations.');
-    semiont.dispose();
+    await session.dispose();
     closeInteractive();
     return;
   }
@@ -80,7 +89,7 @@ async function main(): Promise<void> {
   });
   if (!('response' in gather)) {
     console.error('gather.annotation did not return a Complete event');
-    semiont.dispose();
+    await session.dispose();
     closeInteractive();
     return;
   }
@@ -105,14 +114,14 @@ async function main(): Promise<void> {
   });
   if (yieldEvent.kind !== 'complete') {
     console.error(`yield.fromAnnotation did not complete: ${yieldEvent.kind}`);
-    semiont.dispose();
+    await session.dispose();
     closeInteractive();
     return;
   }
   const resourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;
   console.log(`\n✓ DraftArticle synthesized: ${resourceId}`);
 
-  semiont.dispose();
+  await session.dispose();
   closeInteractive();
 }
 
