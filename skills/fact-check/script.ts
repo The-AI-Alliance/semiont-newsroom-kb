@@ -48,93 +48,94 @@ async function main(): Promise<void> {
   const session = await SemiontSession.signInHttp({ kb, storage: new InMemorySessionStorage(), baseUrl, email, password });
   const semiont = session.client;
 
-  const all = await semiont.browse.resources({ limit: 2000 });
-  const claims = claimArg
-    ? all.filter((r) => r['@id'] === claimArg)
-    : all.filter((r) => {
-        const types: string[] = (r as any).entityTypes ?? [];
-        return types.includes('Claim');
-      });
+  try {
+    const all = await semiont.browse.resources({ limit: 2000 });
+    const claims = claimArg
+      ? all.filter((r) => r['@id'] === claimArg)
+      : all.filter((r) => {
+          const types: string[] = (r as any).entityTypes ?? [];
+          return types.includes('Claim');
+        });
 
-  if (claims.length === 0) {
-    console.log('No Claim resources to fact-check.');
-    await session.dispose();
-    closeInteractive();
-    return;
-  }
-
-  console.log(`Will produce FactCheck for ${claims.length} Claim resource(s).`);
-  const proceed = await confirm('Proceed?', true);
-  if (!proceed) {
-    await session.dispose();
-    closeInteractive();
-    return;
-  }
-
-  let synthesized = 0;
-  for (const claim of claims) {
-    const claimId = ridBrand(claim['@id']);
-    const claimName = (claim as any).name ?? 'untitled-claim';
-
-    // Find an annotation on the Claim resource to seed the gather call
-    const annos = await semiont.browse.annotations(claimId);
-    const seed = annos[0];
-    if (!seed) {
-      console.warn(`  No annotations on ${claimId} — skipping`);
-      continue;
+    if (claims.length === 0) {
+      console.log('No Claim resources to fact-check.');
+      closeInteractive();
+      return;
     }
 
-    const gather = await semiont.gather.annotation(claimId, seed.id, { contextWindow: 1500 });
-    if (!('response' in gather)) continue;
-    const context = gather.response as GatheredContext;
+    console.log(`Will produce FactCheck for ${claims.length} Claim resource(s).`);
+    const proceed = await confirm('Proceed?', true);
+    if (!proceed) {
+      closeInteractive();
+      return;
+    }
 
-    // Find all source-edges from this Claim
-    const supports = annos
-      .filter((a: any) => {
-        const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
-        return bodies.some(
-          (b: any) =>
-            b.type === 'TextualBody' &&
-            b.purpose === 'tagging' &&
-            (Array.isArray(b.value) ? b.value : [b.value]).includes('supports'),
-        );
-      })
-      .flatMap((a: any) => {
-        const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
-        return bodies
-          .filter((b: any) => b.type === 'SpecificResource' && b.purpose === 'linking')
-          .map((b: any) => b.source as string);
+    let synthesized = 0;
+    for (const claim of claims) {
+      const claimId = ridBrand(claim['@id']);
+      const claimName = (claim as any).name ?? 'untitled-claim';
+
+      // Find an annotation on the Claim resource to seed the gather call
+      const annos = await semiont.browse.annotations(claimId);
+      const seed = annos[0];
+      if (!seed) {
+        console.warn(`  No annotations on ${claimId} — skipping`);
+        continue;
+      }
+
+      const gather = await semiont.gather.annotation(claimId, seed.id, { contextWindow: 1500 });
+      if (!('response' in gather)) continue;
+      const context = gather.response as GatheredContext;
+
+      // Find all source-edges from this Claim
+      const supports = annos
+        .filter((a: any) => {
+          const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
+          return bodies.some(
+            (b: any) =>
+              b.type === 'TextualBody' &&
+              b.purpose === 'tagging' &&
+              (Array.isArray(b.value) ? b.value : [b.value]).includes('supports'),
+          );
+        })
+        .flatMap((a: any) => {
+          const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
+          return bodies
+            .filter((b: any) => b.type === 'SpecificResource' && b.purpose === 'linking')
+            .map((b: any) => b.source as string);
+        });
+
+      const sourceList = supports
+        .map((id) => {
+          const r = all.find((x) => x['@id'] === id);
+          return `- ${(r as any)?.name ?? id} (\`${id}\`, types: ${((r as any)?.entityTypes ?? []).join(', ')})`;
+        })
+        .join('\n');
+
+      const prepend =
+        `# Fact-Check: ${claimName}\n\n` +
+        `## Sources bound to this Claim\n\n${sourceList || '(none — Claim is unsourced; flag for editorial)'}\n\n---\n\n`;
+
+      const yieldEvent = await semiont.yield.fromAnnotation(claimId, seed.id, {
+        title: `Fact-Check: ${claimName}`,
+        storageUri: `file://generated/fact-check-${slugify(claimName)}.md`,
+        context,
+        entityTypes: ['FactCheck', 'Aggregate'],
+        prompt: `${FACT_CHECK_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
       });
+      if (yieldEvent.kind !== 'complete') continue;
+      const newResourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;
+      if (!newResourceId) continue;
 
-    const sourceList = supports
-      .map((id) => {
-        const r = all.find((x) => x['@id'] === id);
-        return `- ${(r as any)?.name ?? id} (\`${id}\`, types: ${((r as any)?.entityTypes ?? []).join(', ')})`;
-      })
-      .join('\n');
+      synthesized++;
+      console.log(`  + FactCheck ${newResourceId} for Claim "${claimName}" (${supports.length} sources)`);
+    }
 
-    const prepend =
-      `# Fact-Check: ${claimName}\n\n` +
-      `## Sources bound to this Claim\n\n${sourceList || '(none — Claim is unsourced; flag for editorial)'}\n\n---\n\n`;
-
-    const yieldEvent = await semiont.yield.fromAnnotation(claimId, seed.id, {
-      title: `Fact-Check: ${claimName}`,
-      storageUri: `file://generated/fact-check-${slugify(claimName)}.md`,
-      context,
-      entityTypes: ['FactCheck', 'Aggregate'],
-      prompt: `${FACT_CHECK_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
-    });
-    if (yieldEvent.kind !== 'complete') continue;
-    const newResourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;
-    if (!newResourceId) continue;
-
-    synthesized++;
-    console.log(`  + FactCheck ${newResourceId} for Claim "${claimName}" (${supports.length} sources)`);
+    console.log(`\nDone. Synthesized ${synthesized} FactCheck resources.`);
+    closeInteractive();
+  } finally {
+    await session.dispose();
   }
-
-  console.log(`\nDone. Synthesized ${synthesized} FactCheck resources.`);
-  await session.dispose();
-  closeInteractive();
 }
 
 main().catch((e) => {

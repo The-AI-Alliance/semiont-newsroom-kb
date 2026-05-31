@@ -51,43 +51,44 @@ async function main(): Promise<void> {
   const session = await SemiontSession.signInHttp({ kb, storage: new InMemorySessionStorage(), baseUrl, email, password });
   const semiont = session.client;
 
-  const all = await semiont.browse.resources({ limit: 1000 });
-  const targets: ResourceId[] = all
-    .filter((r) => {
-      const mt = getMediaType(r);
-      return mt === 'text/markdown' || mt === 'text/plain';
-    })
-    .map((r) => ridBrand(r['@id']));
+  try {
+    const all = await semiont.browse.resources({ limit: 1000 });
+    const targets: ResourceId[] = all
+      .filter((r) => {
+        const mt = getMediaType(r);
+        return mt === 'text/markdown' || mt === 'text/plain';
+      })
+      .map((r) => ridBrand(r['@id']));
 
-  if (targets.length === 0) {
-    console.log('No markdown corpus resources found.');
-    await session.dispose();
+    if (targets.length === 0) {
+      console.log('No markdown corpus resources found.');
+      closeInteractive();
+      return;
+    }
+
+    console.log(`Will extract source-relationships across ${targets.length} resource(s).`);
+    const proceed = await confirm('Proceed?', true);
+    if (!proceed) {
+      closeInteractive();
+      return;
+    }
+
+    let total = 0;
+    for (const rId of targets) {
+      const progress = await semiont.mark.assist(rId, 'linking', {
+        entityTypes: RELATIONSHIP_ENTITY_TYPES,
+        instructions: RELATIONSHIP_INSTRUCTIONS,
+      });
+      const n = createdCount(progress);
+      total += n;
+      console.log(`  ${rId}: ${n} relationship annotations`);
+    }
+
+    console.log(`\nDone. Created ${total} source-relationship annotations.`);
     closeInteractive();
-    return;
-  }
-
-  console.log(`Will extract source-relationships across ${targets.length} resource(s).`);
-  const proceed = await confirm('Proceed?', true);
-  if (!proceed) {
+  } finally {
     await session.dispose();
-    closeInteractive();
-    return;
   }
-
-  let total = 0;
-  for (const rId of targets) {
-    const progress = await semiont.mark.assist(rId, 'linking', {
-      entityTypes: RELATIONSHIP_ENTITY_TYPES,
-      instructions: RELATIONSHIP_INSTRUCTIONS,
-    });
-    const n = createdCount(progress);
-    total += n;
-    console.log(`  ${rId}: ${n} relationship annotations`);
-  }
-
-  console.log(`\nDone. Created ${total} source-relationship annotations.`);
-  await session.dispose();
-  closeInteractive();
 }
 
 main().catch((e) => {

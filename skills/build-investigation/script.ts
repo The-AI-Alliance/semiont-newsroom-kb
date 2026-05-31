@@ -49,100 +49,97 @@ async function main(): Promise<void> {
   const session = await SemiontSession.signInHttp({ kb, storage: new InMemorySessionStorage(), baseUrl, email, password });
   const semiont = session.client;
 
-  const all = await semiont.browse.resources({ limit: 2000 });
+  try {
+    const all = await semiont.browse.resources({ limit: 2000 });
 
-  const claims = all.filter((r) => {
-    const types: string[] = (r as any).entityTypes ?? [];
-    if (!types.includes('Claim')) return false;
-    if (!scope) return true;
-    const uri = ((r as any).storageUri ?? '') as string;
-    return uri.includes(`/${scope}/`) || uri.includes(`/generated/`);
-  });
-
-  if (claims.length === 0) {
-    console.log('No Claim resources to investigate.');
-    await session.dispose();
-    closeInteractive();
-    return;
-  }
-
-  console.log(`Will synthesize Investigation from ${claims.length} Claim(s)${scope ? ` (scope: ${scope})` : ''}.`);
-  const proceed = await confirm('Proceed?', true);
-  if (!proceed) {
-    await session.dispose();
-    closeInteractive();
-    return;
-  }
-
-  // Pick a seed Claim with the most source edges (most-corroborated)
-  let seedClaim = claims[0];
-  if (!seedClaim) {
-    console.error('No Claim resources to seed from.');
-    await session.dispose();
-    closeInteractive();
-    return;
-  }
-  let seedEdgeCount = 0;
-  for (const c of claims) {
-    const annos = await semiont.browse.annotations(ridBrand(c['@id']));
-    const edges = annos.filter((a: any) => {
-      const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
-      return bodies.some(
-        (b: any) =>
-          b.type === 'TextualBody' &&
-          b.purpose === 'tagging' &&
-          (Array.isArray(b.value) ? b.value : [b.value]).includes('supports'),
-      );
+    const claims = all.filter((r) => {
+      const types: string[] = (r as any).entityTypes ?? [];
+      if (!types.includes('Claim')) return false;
+      if (!scope) return true;
+      const uri = ((r as any).storageUri ?? '') as string;
+      return uri.includes(`/${scope}/`) || uri.includes(`/generated/`);
     });
-    if (edges.length > seedEdgeCount) {
-      seedClaim = c;
-      seedEdgeCount = edges.length;
+
+    if (claims.length === 0) {
+      console.log('No Claim resources to investigate.');
+      closeInteractive();
+      return;
     }
-  }
 
-  const seedId = ridBrand(seedClaim['@id']);
-  const seedAnnos = await semiont.browse.annotations(seedId);
-  const seedAnno = seedAnnos[0];
-  if (!seedAnno) {
-    console.error('Seed Claim has no annotations.');
-    await session.dispose();
+    console.log(`Will synthesize Investigation from ${claims.length} Claim(s)${scope ? ` (scope: ${scope})` : ''}.`);
+    const proceed = await confirm('Proceed?', true);
+    if (!proceed) {
+      closeInteractive();
+      return;
+    }
+
+    // Pick a seed Claim with the most source edges (most-corroborated)
+    let seedClaim = claims[0];
+    if (!seedClaim) {
+      console.error('No Claim resources to seed from.');
+      closeInteractive();
+      return;
+    }
+    let seedEdgeCount = 0;
+    for (const c of claims) {
+      const annos = await semiont.browse.annotations(ridBrand(c['@id']));
+      const edges = annos.filter((a: any) => {
+        const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
+        return bodies.some(
+          (b: any) =>
+            b.type === 'TextualBody' &&
+            b.purpose === 'tagging' &&
+            (Array.isArray(b.value) ? b.value : [b.value]).includes('supports'),
+        );
+      });
+      if (edges.length > seedEdgeCount) {
+        seedClaim = c;
+        seedEdgeCount = edges.length;
+      }
+    }
+
+    const seedId = ridBrand(seedClaim['@id']);
+    const seedAnnos = await semiont.browse.annotations(seedId);
+    const seedAnno = seedAnnos[0];
+    if (!seedAnno) {
+      console.error('Seed Claim has no annotations.');
+      closeInteractive();
+      return;
+    }
+
+    const gather = await semiont.gather.annotation(seedId, seedAnno.id, { contextWindow: 2000 });
+    if (!('response' in gather)) {
+      console.error('gather.annotation did not return a Complete event');
+      closeInteractive();
+      return;
+    }
+    const context = gather.response as GatheredContext;
+
+    const claimList = claims.slice(0, 30).map((c) => `- ${(c as any).name} (\`${c['@id']}\`)`).join('\n');
+    const prepend =
+      `# Investigation${scope ? `: ${scope}` : ''}\n\n` +
+      `## Claims considered (showing first 30 of ${claims.length})\n\n${claimList}\n\n---\n\n`;
+
+    const yieldEvent = await semiont.yield.fromAnnotation(seedId, seedAnno.id, {
+      title: `Investigation${scope ? `: ${scope}` : ''}`,
+      storageUri: `file://generated/investigation-${slugify(scope ?? 'all')}.md`,
+      context,
+      entityTypes: ['Investigation', 'Aggregate'],
+      prompt: `${INVESTIGATION_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
+    });
+    if (yieldEvent.kind !== 'complete') {
+      console.error(`yield.fromAnnotation did not complete: ${yieldEvent.kind}`);
+      closeInteractive();
+      return;
+    }
+    const resourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;
+    console.log(`\n✓ Investigation synthesized: ${resourceId}`);
+    console.log(`  Claims considered: ${claims.length}`);
+
     closeInteractive();
-    return;
-  }
-
-  const gather = await semiont.gather.annotation(seedId, seedAnno.id, { contextWindow: 2000 });
-  if (!('response' in gather)) {
-    console.error('gather.annotation did not return a Complete event');
+  } finally {
     await session.dispose();
-    closeInteractive();
-    return;
   }
-  const context = gather.response as GatheredContext;
-
-  const claimList = claims.slice(0, 30).map((c) => `- ${(c as any).name} (\`${c['@id']}\`)`).join('\n');
-  const prepend =
-    `# Investigation${scope ? `: ${scope}` : ''}\n\n` +
-    `## Claims considered (showing first 30 of ${claims.length})\n\n${claimList}\n\n---\n\n`;
-
-  const yieldEvent = await semiont.yield.fromAnnotation(seedId, seedAnno.id, {
-    title: `Investigation${scope ? `: ${scope}` : ''}`,
-    storageUri: `file://generated/investigation-${slugify(scope ?? 'all')}.md`,
-    context,
-    entityTypes: ['Investigation', 'Aggregate'],
-    prompt: `${INVESTIGATION_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
-  });
-  if (yieldEvent.kind !== 'complete') {
-    console.error(`yield.fromAnnotation did not complete: ${yieldEvent.kind}`);
-    await session.dispose();
-    closeInteractive();
-    return;
-  }
-  const resourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;
-  console.log(`\n✓ Investigation synthesized: ${resourceId}`);
-  console.log(`  Claims considered: ${claims.length}`);
-
-  await session.dispose();
-  closeInteractive();
 }
 
 main().catch((e) => {

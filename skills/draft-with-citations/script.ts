@@ -55,74 +55,72 @@ async function main(): Promise<void> {
   const session = await SemiontSession.signInHttp({ kb, storage: new InMemorySessionStorage(), baseUrl, email, password });
   const semiont = session.client;
 
-  const all = await semiont.browse.resources({ limit: 2000 });
-  const investigation = all.find((r) => r['@id'] === investigationId);
-  if (!investigation) {
-    console.error(`Investigation ${investigationId} not found.`);
-    await session.dispose();
+  try {
+    const all = await semiont.browse.resources({ limit: 2000 });
+    const investigation = all.find((r) => r['@id'] === investigationId);
+    if (!investigation) {
+      console.error(`Investigation ${investigationId} not found.`);
+      closeInteractive();
+      return;
+    }
+
+    const factChecks = all.filter((r) => {
+      const types: string[] = (r as any).entityTypes ?? [];
+      return types.includes('FactCheck');
+    });
+    if (factChecks.length === 0) {
+      console.error('No FactCheck resources. Run skills/fact-check/script.ts first.');
+      closeInteractive();
+      return;
+    }
+
+    // Seed gather from the Investigation itself
+    const annos = await semiont.browse.annotations(ridBrand(investigation['@id']));
+    const seed = annos[0];
+    if (!seed) {
+      console.error('Investigation has no annotations.');
+      closeInteractive();
+      return;
+    }
+    const gather = await semiont.gather.annotation(ridBrand(investigation['@id']), seed.id, {
+      contextWindow: 2500,
+    });
+    if (!('response' in gather)) {
+      console.error('gather.annotation did not return a Complete event');
+      closeInteractive();
+      return;
+    }
+    const context = gather.response as GatheredContext;
+
+    // Build a manifest of FactChecks for the prompt to reference
+    const manifest = factChecks
+      .map((fc) => `- \`${fc['@id']}\` ${(fc as any).name}`)
+      .join('\n');
+
+    const prepend =
+      `# Draft Article\n\n` +
+      `## Available FactChecks\n\n${manifest}\n\n` +
+      `## Source Investigation\n\n- ${(investigation as any).name} (\`${investigation['@id']}\`)\n\n---\n\n`;
+
+    const yieldEvent = await semiont.yield.fromAnnotation(ridBrand(investigation['@id']), seed.id, {
+      title: `Draft: ${(investigation as any).name}`,
+      storageUri: `file://generated/draft-${slugify((investigation as any).name)}.md`,
+      context,
+      entityTypes: ['DraftArticle', 'Aggregate'],
+      prompt: `${DRAFT_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
+    });
+    if (yieldEvent.kind !== 'complete') {
+      console.error(`yield.fromAnnotation did not complete: ${yieldEvent.kind}`);
+      closeInteractive();
+      return;
+    }
+    const resourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;
+    console.log(`\n✓ DraftArticle synthesized: ${resourceId}`);
+
     closeInteractive();
-    return;
-  }
-
-  const factChecks = all.filter((r) => {
-    const types: string[] = (r as any).entityTypes ?? [];
-    return types.includes('FactCheck');
-  });
-  if (factChecks.length === 0) {
-    console.error('No FactCheck resources. Run skills/fact-check/script.ts first.');
+  } finally {
     await session.dispose();
-    closeInteractive();
-    return;
   }
-
-  // Seed gather from the Investigation itself
-  const annos = await semiont.browse.annotations(ridBrand(investigation['@id']));
-  const seed = annos[0];
-  if (!seed) {
-    console.error('Investigation has no annotations.');
-    await session.dispose();
-    closeInteractive();
-    return;
-  }
-  const gather = await semiont.gather.annotation(ridBrand(investigation['@id']), seed.id, {
-    contextWindow: 2500,
-  });
-  if (!('response' in gather)) {
-    console.error('gather.annotation did not return a Complete event');
-    await session.dispose();
-    closeInteractive();
-    return;
-  }
-  const context = gather.response as GatheredContext;
-
-  // Build a manifest of FactChecks for the prompt to reference
-  const manifest = factChecks
-    .map((fc) => `- \`${fc['@id']}\` ${(fc as any).name}`)
-    .join('\n');
-
-  const prepend =
-    `# Draft Article\n\n` +
-    `## Available FactChecks\n\n${manifest}\n\n` +
-    `## Source Investigation\n\n- ${(investigation as any).name} (\`${investigation['@id']}\`)\n\n---\n\n`;
-
-  const yieldEvent = await semiont.yield.fromAnnotation(ridBrand(investigation['@id']), seed.id, {
-    title: `Draft: ${(investigation as any).name}`,
-    storageUri: `file://generated/draft-${slugify((investigation as any).name)}.md`,
-    context,
-    entityTypes: ['DraftArticle', 'Aggregate'],
-    prompt: `${DRAFT_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
-  });
-  if (yieldEvent.kind !== 'complete') {
-    console.error(`yield.fromAnnotation did not complete: ${yieldEvent.kind}`);
-    await session.dispose();
-    closeInteractive();
-    return;
-  }
-  const resourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;
-  console.log(`\n✓ DraftArticle synthesized: ${resourceId}`);
-
-  await session.dispose();
-  closeInteractive();
 }
 
 main().catch((e) => {
