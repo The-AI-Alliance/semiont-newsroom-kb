@@ -106,16 +106,14 @@ async function main(): Promise<void> {
         }
       }
 
-      // Dedup and add edges from the Claim resource. The selector field is
-      // required by the SDK schema, but these are resource-level relationship
-      // edges — there's no span to point at. Use a FragmentSelector with an
-      // empty value to satisfy the type while signalling "whole resource."
+      // Dedup and add edges from the Claim resource: resource-level relationship
+      // edges — a whole-resource (source-only) target with a SpecificResource
+      // body. No span, so no selector.
       const uniq = [...new Set(foundBoundCanonicals)];
       for (const sourceId of uniq) {
         await semiont.mark.annotation({
           target: {
             source: claimId,
-            selector: { type: 'FragmentSelector', value: '' },
           },
           motivation: 'linking',
           body: [
