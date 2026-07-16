@@ -53,11 +53,11 @@ Install the [GitHub CLI (`gh`)](https://cli.github.com/) if you haven't already.
 
 ```bash
 gh codespace create --repo The-AI-Alliance/semiont-newsroom-kb --machine premiumLinux
-gh codespace ports forward 4000:4000
+gh codespace ports forward 3000:3000 4000:4000
 gh codespace ssh -- cat .devcontainer/admin.json
 ```
 
-The credentials let you log in via the Semiont browser — see [Quick Start: Codespaces](https://github.com/The-AI-Alliance/semiont-newsroom-kb#quick-start-codespaces) on the template-kb README for the full browser-side flow.
+Then open **http://localhost:3000** and sign in with those credentials.
 
 ## License
 
