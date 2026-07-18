@@ -84,16 +84,17 @@ Tag schemas registered upstream (`legal-irac`, `scientific-imrad`, `argument-tou
 
 ## Working in containers — do not install npm packages on the host
 
-This template assumes a containerized workflow. The backend stack runs in containers (`.semiont/scripts/start.sh` brings it up); the skills run in containers too. There is **no need** to install Node, the SDK, or any other tooling on the host machine.
+This template assumes a containerized workflow. The backend stack runs in containers (`semiont start` brings it up); the skills run in containers too. There is **no need** to install Node, the SDK, or any other tooling on the host machine.
 
 ## Backend setup
 
 Before running any skill, the Semiont backend stack must be up. Two paths:
 
-### Local: `start.sh`
+### Local: `semiont start`
 
 ```bash
-.semiont/scripts/start.sh --email admin@example.com --password password --observe
+brew install the-ai-alliance/semiont/semiont   # once
+semiont start --email admin@example.com --password password
 ```
 
 ### Codespaces
