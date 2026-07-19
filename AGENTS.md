@@ -94,7 +94,8 @@ Before running any skill, the Semiont backend stack must be up. Two paths:
 
 ```bash
 brew install the-ai-alliance/semiont/semiont   # once
-semiont start --email admin@example.com --password password
+semiont start
+semiont useradd --email admin@example.com --password password --admin
 ```
 
 ### Codespaces
