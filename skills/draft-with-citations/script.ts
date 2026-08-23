@@ -102,15 +102,14 @@ async function main(): Promise<void> {
       `## Available FactChecks\n\n${manifest}\n\n` +
       `## Source Investigation\n\n- ${(investigation as any).name} (\`${investigation['@id']}\`)\n\n---\n\n`;
 
-    const yieldEvent = await semiont.yield.fromAnnotation(ridBrand(investigation['@id']), seed.id, {
+    const yieldEvent = await semiont.yield.fromContext(context, {
       title: `Draft: ${(investigation as any).name}`,
       storageUri: `file://generated/draft-${slugify((investigation as any).name)}.md`,
-      context,
       entityTypes: ['DraftArticle', 'Aggregate'],
       prompt: `${DRAFT_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
     });
     if (yieldEvent.kind !== 'complete') {
-      console.error(`yield.fromAnnotation did not complete: ${yieldEvent.kind}`);
+      console.error(`yield.fromContext did not complete: ${yieldEvent.kind}`);
       closeInteractive();
       return;
     }

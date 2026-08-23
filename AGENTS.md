@@ -20,14 +20,14 @@ If you're an AI assistant working in this repo, this file is your orientation. T
 | [`ingest-corpus`](skills/ingest-corpus/) | Walk the repo, declare entity-type vocabulary, create one resource per file | `frame.addEntityTypes`, `yield.resource` |
 | [`mark-people-and-orgs`](skills/mark-people-and-orgs/) | Detect Person, Organization, Agency, Document, Date, MonetaryValue, Topic spans | `mark.assist` (linking) |
 | [`tag-source-type`](skills/tag-source-type/) | Classify each claim/quote by source type | `mark.assist` (linking + interim entity-type vocabulary; will migrate to registered tag schema) |
-| [`canonicalize-people`](skills/canonicalize-people/) | Promote Person mentions to canonical Person resources via Wikidata grounding | `+ match.search`, `+ yield.fromAnnotation`, `+ bind.body` |
+| [`canonicalize-people`](skills/canonicalize-people/) | Promote Person mentions to canonical Person resources via Wikidata grounding | `+ match.search`, `+ yield.fromContext`, `+ bind.body` |
 | [`canonicalize-orgs`](skills/canonicalize-orgs/) | Promote Organization mentions to canonical Organization resources | same shape as canonicalize-people |
-| [`extract-claims`](skills/extract-claims/) | Tag each factual assertion; synthesize Claim resources | `+ yield.fromAnnotation` |
+| [`extract-claims`](skills/extract-claims/) | Tag each factual assertion; synthesize Claim resources | `+ yield.fromContext` |
 | [`bind-claim-to-source`](skills/bind-claim-to-source/) | Resolve and bind each Claim to its supporting source span | `+ gather.annotation`, `+ bind.body` |
 | [`build-source-graph`](skills/build-source-graph/) | Wire Person × Statement × Topic edges; tag relationships | `+ mark.annotation` |
 | [`comment-action-items`](skills/comment-action-items/) | Surface follow-up questions, missing corroboration, redaction signals | `mark.assist` (commenting) |
 | [`balance-audit`](skills/balance-audit/) | Per-topic named-vs-anonymous source distribution | `browse.annotations`, `yield.resource` |
-| [`fact-check`](skills/fact-check/) | Per-Claim aggregate with all supporting/contradicting sources | `+ gather.annotation`, `+ yield.fromAnnotation` |
+| [`fact-check`](skills/fact-check/) | Per-Claim aggregate with all supporting/contradicting sources | `+ gather.annotation`, `+ yield.fromContext` |
 | [`build-investigation`](skills/build-investigation/) | Top-level investigation aggregate — narrative synthesis | full pipeline composition |
 | [`draft-with-citations`](skills/draft-with-citations/) | Article scaffold with inline fact-check links | full pipeline composition |
 

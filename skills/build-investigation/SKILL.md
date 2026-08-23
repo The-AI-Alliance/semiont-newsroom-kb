@@ -15,11 +15,11 @@ For a given investigation (a top-level subdirectory in the corpus), or for the w
 1. Walks every Claim resource scoped to the investigation.
 2. Walks every canonical Person, Organization, Agency, Document referenced by those Claims.
 3. `gather.annotation` over the most material claims to assemble context.
-4. `yield.fromAnnotation` synthesizes an Investigation aggregate: narrative arc, key sources, key documents, contested claims, recommended next steps.
+4. `yield.fromContext` synthesizes an Investigation aggregate: narrative arc, key sources, key documents, contested claims, recommended next steps.
 
 ## SDK verbs
 
-`browse.resources`, `browse.annotations`, `gather.annotation`, `yield.fromAnnotation`.
+`browse.resources`, `browse.annotations`, `gather.annotation`, `yield.fromContext`.
 
 ## CLI args
 

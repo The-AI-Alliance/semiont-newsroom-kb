@@ -148,15 +148,14 @@ async function main(): Promise<void> {
         if (!proceedYield) continue;
 
         const externalRefs = formatReferenceSection([lookupWikidataStub(key)]);
-        const yieldEvent = await semiont.yield.fromAnnotation(sample.rId, sample.annId, {
+        const yieldEvent = await semiont.yield.fromContext(context, {
           title: key,
           storageUri: `file://generated/person-${slugify(key)}.md`,
-          context,
           entityTypes: ['Person'],
           prompt: externalRefs
             ? `Include this references section at the end of the body verbatim:\n\n${externalRefs}`
             : undefined,
-        });
+          });
         if (yieldEvent.kind !== 'complete') continue;
         const newResourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;
         if (!newResourceId) continue;

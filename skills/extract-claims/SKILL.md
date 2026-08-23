@@ -12,12 +12,12 @@ You are turning every factual assertion into a queryable Claim resource — the 
 
 1. For every markdown resource, browses source-type-tagged annotations from `tag-source-type`.
 2. For each annotation, calls `gather.annotation` to pull surrounding context.
-3. Calls `yield.fromAnnotation` to synthesize a Claim resource with body fields (assertion, subject, supporting language, source-type, source-text, scope).
+3. Calls `yield.fromContext` to synthesize a Claim resource with body fields (assertion, subject, supporting language, source-type, source-text, scope).
 4. Binds the source annotation to the new Claim resource.
 
 ## SDK verbs
 
-`browse.resources`, `browse.annotations`, `gather.annotation`, `yield.fromAnnotation`, `bind.body`.
+`browse.resources`, `browse.annotations`, `gather.annotation`, `yield.fromContext`, `bind.body`.
 
 ## Tier-2 parameters
 

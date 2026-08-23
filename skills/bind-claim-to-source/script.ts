@@ -56,7 +56,7 @@ async function main(): Promise<void> {
     let edgesAdded = 0;
     for (const claim of claims) {
       const claimId = ridBrand(claim['@id']);
-      // The Claim was synthesized via yield.fromAnnotation — its source annotation
+      // The Claim was synthesized via yield.fromContext — its source annotation
       // lives in the document, and the binding makes it queryable in reverse.
       // Find annotations whose body has a SpecificResource pointing at this Claim.
       let foundSourceTypes: string[] = [];
