@@ -33,7 +33,7 @@ async function main(): Promise<void> {
   try {
     const all = (await semiont.browse.resources({ limit: 2000 }).fresh()).resources;
     const claims = all.filter((r) => {
-      const types: string[] = (r as any).entityTypes ?? [];
+      const types: string[] = r.entityTypes ?? [];
       return types.includes('Claim');
     });
 
@@ -87,19 +87,19 @@ async function main(): Promise<void> {
           for (const other of annotations) {
             if (other.id === ann.id) continue;
             const otherBodies = Array.isArray(other.body) ? other.body : other.body ? [other.body] : [];
-            const otherTargets = otherBodies.filter(
-              (b: any) => b.type === 'SpecificResource' && b.purpose === 'linking',
-            );
-            for (const t of otherTargets) {
-              const targetRes = all.find((x) => x['@id'] === (t as any).source);
-              const targetTypes: string[] = (targetRes as any)?.entityTypes ?? [];
+            // AnnotationBody is discriminated on `type`; the guard narrows it to
+            // SpecificResource so `.source` is typed, with no cast needed.
+            for (const t of otherBodies) {
+              if (t.type !== 'SpecificResource' || t.purpose !== 'linking') continue;
+              const targetRes = all.find((x) => x['@id'] === t.source);
+              const targetTypes: string[] = targetRes?.entityTypes ?? [];
               if (
                 targetTypes.includes('Person') ||
                 targetTypes.includes('Organization') ||
                 targetTypes.includes('Agency') ||
                 targetTypes.includes('Document')
               ) {
-                foundBoundCanonicals.push((t as any).source);
+                foundBoundCanonicals.push(t.source);
               }
             }
           }

@@ -14,6 +14,7 @@
 import { SemiontSession, InMemorySessionStorage, entityType, resourceId as ridBrand, type KbTarget, type ResourceId } from '@semiont/sdk';
 import { confirm, close as closeInteractive } from '../../src/interactive.js';
 import { createdCount } from '../../src/mark-result.js';
+import { getMediaType } from '../../src/media-type.js';
 
 const SOURCE_ENTITY_TYPES = [
   entityType('SourceType_Named'),
@@ -33,14 +34,6 @@ type that supports the assertion. Use exactly one of:
 Tag the span where the assertion is made — typically a sentence or short paragraph. Do not tag
 attribution-only language (the "according to X" itself); tag the assertion that the attribution supports.`;
 
-function getMediaType(r: any): string | undefined {
-  const reps = Array.isArray(r.representations)
-    ? r.representations
-    : r.representations
-      ? [r.representations]
-      : [];
-  return reps[0]?.mediaType;
-}
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2).filter((a) => !a.startsWith('-'));

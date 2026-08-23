@@ -65,7 +65,7 @@ async function main(): Promise<void> {
     }
 
     const factChecks = all.filter((r) => {
-      const types: string[] = (r as any).entityTypes ?? [];
+      const types: string[] = r.entityTypes ?? [];
       return types.includes('FactCheck');
     });
     if (factChecks.length === 0) {
@@ -94,17 +94,17 @@ async function main(): Promise<void> {
 
     // Build a manifest of FactChecks for the prompt to reference
     const manifest = factChecks
-      .map((fc) => `- \`${fc['@id']}\` ${(fc as any).name}`)
+      .map((fc) => `- \`${fc['@id']}\` ${fc.name}`)
       .join('\n');
 
     const prepend =
       `# Draft Article\n\n` +
       `## Available FactChecks\n\n${manifest}\n\n` +
-      `## Source Investigation\n\n- ${(investigation as any).name} (\`${investigation['@id']}\`)\n\n---\n\n`;
+      `## Source Investigation\n\n- ${investigation.name} (\`${investigation['@id']}\`)\n\n---\n\n`;
 
     const yieldEvent = await semiont.yield.fromContext(context, {
-      title: `Draft: ${(investigation as any).name}`,
-      storageUri: `file://generated/draft-${slugify((investigation as any).name)}.md`,
+      title: `Draft: ${investigation.name}`,
+      storageUri: `file://generated/draft-${slugify(investigation.name)}.md`,
       entityTypes: ['DraftArticle', 'Aggregate'],
       prompt: `${DRAFT_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
     });

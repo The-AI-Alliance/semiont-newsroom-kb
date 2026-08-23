@@ -4,8 +4,9 @@
  * Usage: tsx skills/balance-audit/script.ts [--interactive]
  */
 
-import { SemiontSession, InMemorySessionStorage, resourceId as ridBrand, type KbTarget } from '@semiont/sdk';
+import { SemiontSession, InMemorySessionStorage, resourceId as ridBrand, type KbTarget, type Annotation} from '@semiont/sdk';
 import { confirm, close as closeInteractive } from '../../src/interactive.js';
+import { getMediaType } from '../../src/media-type.js';
 
 const NAMED_THRESHOLD = Number(process.env.NAMED_THRESHOLD ?? 0.4);
 
@@ -16,19 +17,16 @@ interface AnnoSpan {
   tags: string[];
 }
 
-function getMediaType(r: any): string | undefined {
-  const reps = Array.isArray(r.representations)
-    ? r.representations
-    : r.representations
-      ? [r.representations]
-      : [];
-  return reps[0]?.mediaType;
-}
 
-function parseSpan(ann: any): { start: number; end: number } | null {
-  const sel = ann.target?.selector;
-  if (sel && typeof sel.start === 'number' && typeof sel.end === 'number') {
-    return { start: sel.start, end: sel.end };
+function parseSpan(ann: Annotation): { start: number; end: number } | null {
+  // `target` may be a bare IRI string, and `selector` may be a single selector
+  // OR an array of them. The previous `ann.target?.selector` handled neither:
+  // typed `any`, it silently returned null for every array-selector annotation.
+  const target = ann.target;
+  if (typeof target === 'string' || !target.selector) return null;
+  const selectors = Array.isArray(target.selector) ? target.selector : [target.selector];
+  for (const s of selectors) {
+    if (s.type === 'TextPositionSelector') return { start: s.start, end: s.end };
   }
   return null;
 }
@@ -66,8 +64,11 @@ async function main(): Promise<void> {
       for (const ann of annos) {
         const bodies = Array.isArray(ann.body) ? ann.body : ann.body ? [ann.body] : [];
         const tags = bodies
-          .filter((b: any) => b.type === 'TextualBody' && b.purpose === 'tagging')
-          .flatMap((b: any) => (Array.isArray(b.value) ? b.value : [b.value])) as string[];
+          .flatMap((b) =>
+            b.type === 'TextualBody' && b.purpose === 'tagging'
+              ? (Array.isArray(b.value) ? b.value : [b.value])
+              : [],
+          ) as string[];
         const span = parseSpan(ann);
         if (!span) continue;
         if (tags.includes('Topic')) {
