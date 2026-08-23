@@ -13,11 +13,11 @@ You are producing a per-Claim FactCheck aggregate — the editorial-review unit.
 For each Claim resource:
 1. `gather.annotation` over the Claim's source annotation to assemble context.
 2. Walk the corpus for source-relationship annotations (`corroborates`, `contradicts`) targeting this Claim.
-3. `yield.fromAnnotation` synthesizes a FactCheck resource: supporting sources, contradicting sources, confidence rating, recommended editorial action.
+3. `yield.fromContext` synthesizes a FactCheck resource: supporting sources, contradicting sources, confidence rating, recommended editorial action.
 
 ## SDK verbs
 
-`browse.resources`, `browse.annotations`, `gather.annotation`, `yield.fromAnnotation`.
+`browse.resources`, `browse.annotations`, `gather.annotation`, `yield.fromContext`.
 
 ## CLI args
 

@@ -120,15 +120,14 @@ async function main(): Promise<void> {
       `# Investigation${scope ? `: ${scope}` : ''}\n\n` +
       `## Claims considered (showing first 30 of ${claims.length})\n\n${claimList}\n\n---\n\n`;
 
-    const yieldEvent = await semiont.yield.fromAnnotation(seedId, seedAnno.id, {
+    const yieldEvent = await semiont.yield.fromContext(context, {
       title: `Investigation${scope ? `: ${scope}` : ''}`,
       storageUri: `file://generated/investigation-${slugify(scope ?? 'all')}.md`,
-      context,
       entityTypes: ['Investigation', 'Aggregate'],
       prompt: `${INVESTIGATION_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
     });
     if (yieldEvent.kind !== 'complete') {
-      console.error(`yield.fromAnnotation did not complete: ${yieldEvent.kind}`);
+      console.error(`yield.fromContext did not complete: ${yieldEvent.kind}`);
       closeInteractive();
       return;
     }

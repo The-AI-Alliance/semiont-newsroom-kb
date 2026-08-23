@@ -12,12 +12,12 @@ You are turning every Person mention in the corpus into a canonical Person resou
 
 1. Walks `Person`-tagged annotations across the corpus.
 2. Clusters by surface text.
-3. For each cluster: gathers context, matches against existing Person resources; if no confident match, synthesizes a new Person resource via `yield.fromAnnotation` with body content from gathered context plus External References pointing at Wikidata.
+3. For each cluster: gathers context, matches against existing Person resources; if no confident match, synthesizes a new Person resource via `yield.fromContext` with body content from gathered context plus External References pointing at Wikidata.
 4. Binds every annotation in the cluster via `bind.body`.
 
 ## SDK verbs
 
-`browse.resources`, `browse.annotations`, `gather.annotation`, `match.search`, `yield.fromAnnotation`, `bind.body`.
+`browse.resources`, `browse.annotations`, `gather.annotation`, `match.search`, `yield.fromContext`, `bind.body`.
 
 ## Tier-2 parameters
 

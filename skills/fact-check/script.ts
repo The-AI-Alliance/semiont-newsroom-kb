@@ -116,10 +116,9 @@ async function main(): Promise<void> {
         `# Fact-Check: ${claimName}\n\n` +
         `## Sources bound to this Claim\n\n${sourceList || '(none — Claim is unsourced; flag for editorial)'}\n\n---\n\n`;
 
-      const yieldEvent = await semiont.yield.fromAnnotation(claimId, seed.id, {
+      const yieldEvent = await semiont.yield.fromContext(context, {
         title: `Fact-Check: ${claimName}`,
         storageUri: `file://generated/fact-check-${slugify(claimName)}.md`,
-        context,
         entityTypes: ['FactCheck', 'Aggregate'],
         prompt: `${FACT_CHECK_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
       });

@@ -14,7 +14,7 @@ Same shape as `canonicalize-people`, but targeting `Organization` and `Agency` a
 
 ## SDK verbs
 
-`browse.resources`, `browse.annotations`, `gather.annotation`, `match.search`, `yield.fromAnnotation`, `bind.body`.
+`browse.resources`, `browse.annotations`, `gather.annotation`, `match.search`, `yield.fromContext`, `bind.body`.
 
 ## Run it
 

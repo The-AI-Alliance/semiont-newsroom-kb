@@ -14,11 +14,11 @@ For a given investigation:
 
 1. Walks the Investigation aggregate produced by `build-investigation`.
 2. Walks every Claim referenced by the investigation; loads its FactCheck.
-3. `yield.fromAnnotation` synthesizes a `DraftArticle` resource — narrative prose where each assertion carries an inline `[fact-check](resource-id)` link.
+3. `yield.fromContext` synthesizes a `DraftArticle` resource — narrative prose where each assertion carries an inline `[fact-check](resource-id)` link.
 
 ## SDK verbs
 
-`browse.resources`, `gather.annotation`, `yield.fromAnnotation`.
+`browse.resources`, `gather.annotation`, `yield.fromContext`.
 
 ## CLI args
 

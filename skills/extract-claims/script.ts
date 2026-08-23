@@ -123,10 +123,9 @@ async function main(): Promise<void> {
       if (!('response' in gather)) continue;
       const context = gather.response as GatheredContext;
 
-      const yieldEvent = await semiont.yield.fromAnnotation(c.rId, c.annId, {
+      const yieldEvent = await semiont.yield.fromContext(context, {
         title: `Claim: ${c.text.slice(0, 80)}`,
         storageUri: `file://generated/claim-${slugify(c.text)}.md`,
-        context,
         entityTypes: ['Claim', 'Aggregate'],
         prompt: CLAIM_INSTRUCTIONS,
       });
