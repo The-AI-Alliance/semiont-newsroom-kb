@@ -89,20 +89,19 @@ async function main(): Promise<void> {
 
       // Find all source-edges from this Claim
       const supports = annos
-        .filter((a: any) => {
+        .filter((a) => {
           const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
           return bodies.some(
-            (b: any) =>
+            (b) =>
               b.type === 'TextualBody' &&
               b.purpose === 'tagging' &&
               (Array.isArray(b.value) ? b.value : [b.value]).includes('supports'),
           );
         })
-        .flatMap((a: any) => {
+        .flatMap((a) => {
           const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
           return bodies
-            .filter((b: any) => b.type === 'SpecificResource' && b.purpose === 'linking')
-            .map((b: any) => b.source as string);
+            .flatMap((b) => (b.type === 'SpecificResource' && b.purpose === 'linking' ? [b.source] : []));
         });
 
       const sourceList = supports
