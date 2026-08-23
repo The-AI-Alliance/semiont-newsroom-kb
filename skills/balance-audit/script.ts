@@ -4,7 +4,7 @@
  * Usage: tsx skills/balance-audit/script.ts [--interactive]
  */
 
-import { SemiontSession, InMemorySessionStorage, resourceId as ridBrand, type KnowledgeBase } from '@semiont/sdk';
+import { SemiontSession, InMemorySessionStorage, resourceId as ridBrand, type KbTarget } from '@semiont/sdk';
 import { confirm, close as closeInteractive } from '../../src/interactive.js';
 
 const NAMED_THRESHOLD = Number(process.env.NAMED_THRESHOLD ?? 0.4);
@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   const email = process.env.SEMIONT_USER_EMAIL!;
   const password = process.env.SEMIONT_USER_PASSWORD!;
   const u = new URL(baseUrl);
-  const kb: KnowledgeBase = {
+  const kb: KbTarget = {
     id: 'newsroom-balance-audit',
     label: 'newsroom balance-audit',
     email,
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   const semiont = session.client;
 
   try {
-    const all = await semiont.browse.resources({ limit: 1000 });
+    const all = (await semiont.browse.resources({ limit: 1000 }).fresh()).resources;
     const markdown = all.filter((r) => {
       const mt = getMediaType(r);
       return mt === 'text/markdown' || mt === 'text/plain';
@@ -60,7 +60,7 @@ async function main(): Promise<void> {
 
     for (const r of markdown) {
       const rId = r['@id'];
-      const annos = await semiont.browse.annotations(ridBrand(rId));
+      const annos = await semiont.browse.annotations(ridBrand(rId)).fresh();
       const topics: AnnoSpan[] = [];
       const sourceTypes: AnnoSpan[] = [];
       for (const ann of annos) {

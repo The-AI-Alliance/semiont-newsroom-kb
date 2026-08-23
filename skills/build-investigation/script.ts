@@ -7,7 +7,7 @@
 import {
   SemiontSession,
   InMemorySessionStorage,
-  type KnowledgeBase,
+  type KbTarget,
   resourceId as ridBrand,
   type GatheredContext,
 } from '@semiont/sdk';
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   const email = process.env.SEMIONT_USER_EMAIL!;
   const password = process.env.SEMIONT_USER_PASSWORD!;
   const u = new URL(baseUrl);
-  const kb: KnowledgeBase = {
+  const kb: KbTarget = {
     id: 'newsroom-build-investigation',
     label: 'newsroom build-investigation',
     email,
@@ -50,7 +50,7 @@ async function main(): Promise<void> {
   const semiont = session.client;
 
   try {
-    const all = await semiont.browse.resources({ limit: 2000 });
+    const all = (await semiont.browse.resources({ limit: 2000 }).fresh()).resources;
 
     const claims = all.filter((r) => {
       const types: string[] = (r as any).entityTypes ?? [];
@@ -82,7 +82,7 @@ async function main(): Promise<void> {
     }
     let seedEdgeCount = 0;
     for (const c of claims) {
-      const annos = await semiont.browse.annotations(ridBrand(c['@id']));
+      const annos = await semiont.browse.annotations(ridBrand(c['@id'])).fresh();
       const edges = annos.filter((a: any) => {
         const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
         return bodies.some(
@@ -99,7 +99,7 @@ async function main(): Promise<void> {
     }
 
     const seedId = ridBrand(seedClaim['@id']);
-    const seedAnnos = await semiont.browse.annotations(seedId);
+    const seedAnnos = await semiont.browse.annotations(seedId).fresh();
     const seedAnno = seedAnnos[0];
     if (!seedAnno) {
       console.error('Seed Claim has no annotations.');

@@ -4,7 +4,7 @@
  * Usage: tsx skills/bind-claim-to-source/script.ts [--interactive]
  */
 
-import { SemiontSession, InMemorySessionStorage, resourceId as ridBrand, type KnowledgeBase, type ResourceId } from '@semiont/sdk';
+import { SemiontSession, InMemorySessionStorage, resourceId as ridBrand, type KbTarget, type ResourceId } from '@semiont/sdk';
 import { confirm, close as closeInteractive } from '../../src/interactive.js';
 
 function getMediaType(r: any): string | undefined {
@@ -21,7 +21,7 @@ async function main(): Promise<void> {
   const email = process.env.SEMIONT_USER_EMAIL!;
   const password = process.env.SEMIONT_USER_PASSWORD!;
   const u = new URL(baseUrl);
-  const kb: KnowledgeBase = {
+  const kb: KbTarget = {
     id: 'newsroom-bind-claim-to-source',
     label: 'newsroom bind-claim-to-source',
     email,
@@ -31,7 +31,7 @@ async function main(): Promise<void> {
   const semiont = session.client;
 
   try {
-    const all = await semiont.browse.resources({ limit: 2000 });
+    const all = (await semiont.browse.resources({ limit: 2000 }).fresh()).resources;
     const claims = all.filter((r) => {
       const types: string[] = (r as any).entityTypes ?? [];
       return types.includes('Claim');
@@ -66,7 +66,7 @@ async function main(): Promise<void> {
         const mt = getMediaType(r);
         if (mt !== 'text/markdown' && mt !== 'text/plain') continue;
         const rId = ridBrand(r['@id']);
-        const annotations = await semiont.browse.annotations(rId);
+        const annotations = await semiont.browse.annotations(rId).fresh();
         for (const ann of annotations) {
           const annBodies = Array.isArray(ann.body) ? ann.body : ann.body ? [ann.body] : [];
           const targets = annBodies.filter(

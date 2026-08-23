@@ -8,7 +8,7 @@
 import {
   SemiontSession,
   InMemorySessionStorage,
-  type KnowledgeBase,
+  type KbTarget,
   resourceId as ridBrand,
   type GatheredContext,
 } from '@semiont/sdk';
@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   const email = process.env.SEMIONT_USER_EMAIL!;
   const password = process.env.SEMIONT_USER_PASSWORD!;
   const u = new URL(baseUrl);
-  const kb: KnowledgeBase = {
+  const kb: KbTarget = {
     id: 'newsroom-draft-with-citations',
     label: 'newsroom draft-with-citations',
     email,
@@ -56,7 +56,7 @@ async function main(): Promise<void> {
   const semiont = session.client;
 
   try {
-    const all = await semiont.browse.resources({ limit: 2000 });
+    const all = (await semiont.browse.resources({ limit: 2000 }).fresh()).resources;
     const investigation = all.find((r) => r['@id'] === investigationId);
     if (!investigation) {
       console.error(`Investigation ${investigationId} not found.`);
@@ -75,7 +75,7 @@ async function main(): Promise<void> {
     }
 
     // Seed gather from the Investigation itself
-    const annos = await semiont.browse.annotations(ridBrand(investigation['@id']));
+    const annos = await semiont.browse.annotations(ridBrand(investigation['@id'])).fresh();
     const seed = annos[0];
     if (!seed) {
       console.error('Investigation has no annotations.');
