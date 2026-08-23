@@ -6,15 +6,8 @@
 
 import { SemiontSession, InMemorySessionStorage, resourceId as ridBrand, type KbTarget, type ResourceId } from '@semiont/sdk';
 import { confirm, close as closeInteractive } from '../../src/interactive.js';
+import { getMediaType } from '../../src/media-type.js';
 
-function getMediaType(r: any): string | undefined {
-  const reps = Array.isArray(r.representations)
-    ? r.representations
-    : r.representations
-      ? [r.representations]
-      : [];
-  return reps[0]?.mediaType;
-}
 
 async function main(): Promise<void> {
   const baseUrl = process.env.SEMIONT_API_URL ?? 'http://localhost:4000';
@@ -69,15 +62,22 @@ async function main(): Promise<void> {
         const annotations = await semiont.browse.annotations(rId).fresh();
         for (const ann of annotations) {
           const annBodies = Array.isArray(ann.body) ? ann.body : ann.body ? [ann.body] : [];
-          const targets = annBodies.filter(
-            (b: any) => b.type === 'SpecificResource' && b.purpose === 'linking',
+          // Single predicate so the guard narrows `b` to SpecificResource and
+          // `.source` is typed — no intermediate array, no cast.
+          const bindsToClaim = annBodies.some(
+            (b) =>
+              b.type === 'SpecificResource' &&
+              b.purpose === 'linking' &&
+              b.source === claim['@id'],
           );
-          const bindsToClaim = targets.some((b: any) => b.source === claim['@id']);
           if (!bindsToClaim) continue;
 
           const tags = annBodies
-            .filter((b: any) => b.type === 'TextualBody' && b.purpose === 'tagging')
-            .flatMap((b: any) => (Array.isArray(b.value) ? b.value : [b.value]));
+            .flatMap((b) =>
+              b.type === 'TextualBody' && b.purpose === 'tagging'
+                ? (Array.isArray(b.value) ? b.value : [b.value])
+                : [],
+            );
           for (const t of tags) {
             if (typeof t === 'string' && t.startsWith('SourceType_')) foundSourceTypes.push(t);
           }

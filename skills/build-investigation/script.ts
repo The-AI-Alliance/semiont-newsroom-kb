@@ -83,10 +83,10 @@ async function main(): Promise<void> {
     let seedEdgeCount = 0;
     for (const c of claims) {
       const annos = await semiont.browse.annotations(ridBrand(c['@id'])).fresh();
-      const edges = annos.filter((a: any) => {
+      const edges = annos.filter((a) => {
         const bodies = Array.isArray(a.body) ? a.body : a.body ? [a.body] : [];
         return bodies.some(
-          (b: any) =>
+          (b) =>
             b.type === 'TextualBody' &&
             b.purpose === 'tagging' &&
             (Array.isArray(b.value) ? b.value : [b.value]).includes('supports'),
