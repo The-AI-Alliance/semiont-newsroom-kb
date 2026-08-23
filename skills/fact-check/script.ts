@@ -53,7 +53,7 @@ async function main(): Promise<void> {
     const claims = claimArg
       ? all.filter((r) => r['@id'] === claimArg)
       : all.filter((r) => {
-          const types: string[] = (r as any).entityTypes ?? [];
+          const types: string[] = r.entityTypes ?? [];
           return types.includes('Claim');
         });
 
@@ -73,7 +73,7 @@ async function main(): Promise<void> {
     let synthesized = 0;
     for (const claim of claims) {
       const claimId = ridBrand(claim['@id']);
-      const claimName = (claim as any).name ?? 'untitled-claim';
+      const claimName = claim.name ?? 'untitled-claim';
 
       // Find an annotation on the Claim resource to seed the gather call
       const annos = await semiont.browse.annotations(claimId).fresh();
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
       const sourceList = supports
         .map((id) => {
           const r = all.find((x) => x['@id'] === id);
-          return `- ${(r as any)?.name ?? id} (\`${id}\`, types: ${((r as any)?.entityTypes ?? []).join(', ')})`;
+          return `- ${r?.name ?? id} (\`${id}\`, types: ${(r?.entityTypes ?? []).join(', ')})`;
         })
         .join('\n');
 

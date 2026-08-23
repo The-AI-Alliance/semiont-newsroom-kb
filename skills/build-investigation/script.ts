@@ -53,10 +53,10 @@ async function main(): Promise<void> {
     const all = (await semiont.browse.resources({ limit: 2000 }).fresh()).resources;
 
     const claims = all.filter((r) => {
-      const types: string[] = (r as any).entityTypes ?? [];
+      const types: string[] = r.entityTypes ?? [];
       if (!types.includes('Claim')) return false;
       if (!scope) return true;
-      const uri = ((r as any).storageUri ?? '') as string;
+      const uri = (r.storageUri ?? '') as string;
       return uri.includes(`/${scope}/`) || uri.includes(`/generated/`);
     });
 
@@ -115,7 +115,7 @@ async function main(): Promise<void> {
     }
     const context = gather.response as GatheredContext;
 
-    const claimList = claims.slice(0, 30).map((c) => `- ${(c as any).name} (\`${c['@id']}\`)`).join('\n');
+    const claimList = claims.slice(0, 30).map((c) => `- ${c.name} (\`${c['@id']}\`)`).join('\n');
     const prepend =
       `# Investigation${scope ? `: ${scope}` : ''}\n\n` +
       `## Claims considered (showing first 30 of ${claims.length})\n\n${claimList}\n\n---\n\n`;
