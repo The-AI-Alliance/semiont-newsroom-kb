@@ -7,7 +7,7 @@
 import {
   SemiontSession,
   InMemorySessionStorage,
-  type KnowledgeBase,
+  type KbTarget,
   resourceId as ridBrand,
   type GatheredContext,
 } from '@semiont/sdk';
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   const email = process.env.SEMIONT_USER_EMAIL!;
   const password = process.env.SEMIONT_USER_PASSWORD!;
   const u = new URL(baseUrl);
-  const kb: KnowledgeBase = {
+  const kb: KbTarget = {
     id: 'newsroom-fact-check',
     label: 'newsroom fact-check',
     email,
@@ -49,7 +49,7 @@ async function main(): Promise<void> {
   const semiont = session.client;
 
   try {
-    const all = await semiont.browse.resources({ limit: 2000 });
+    const all = (await semiont.browse.resources({ limit: 2000 }).fresh()).resources;
     const claims = claimArg
       ? all.filter((r) => r['@id'] === claimArg)
       : all.filter((r) => {
@@ -76,7 +76,7 @@ async function main(): Promise<void> {
       const claimName = (claim as any).name ?? 'untitled-claim';
 
       // Find an annotation on the Claim resource to seed the gather call
-      const annos = await semiont.browse.annotations(claimId);
+      const annos = await semiont.browse.annotations(claimId).fresh();
       const seed = annos[0];
       if (!seed) {
         console.warn(`  No annotations on ${claimId} — skipping`);
