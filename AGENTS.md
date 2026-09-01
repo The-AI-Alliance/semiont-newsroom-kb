@@ -13,7 +13,7 @@ If you're an AI assistant working in this repo, this file is your orientation. T
   - `src/journalism-patterns.ts` — fast pattern-detection for source attributions ("according to X", "X told the reporter", "[REDACTED]"), used as a pre-filter
   - `src/external-authorities.ts` — adapters for Wikidata-style name lookups, agency-website URL construction
   - `src/interactive.ts` — `confirm` / `pick` / `preview` helpers for tier-3 interactive checkpoints
-- **`skills/`** — twelve skills, each shipping a `SKILL.md` plus a `script.ts` that uses `@semiont/sdk` against the running backend.
+- **`skills/`** — twelve skills, each shipping a `SKILL.md` plus a `script.ts` that uses `@semiont/sdk` against the running stack.
 
 | Skill | What it does | New SDK verbs |
 |---|---|---|
@@ -84,11 +84,11 @@ Tag schemas registered upstream (`legal-irac`, `scientific-imrad`, `argument-tou
 
 ## Working in containers — do not install npm packages on the host
 
-This template assumes a containerized workflow. The backend stack runs in containers (`semiont start` brings it up); the skills run in containers too. There is **no need** to install Node, the SDK, or any other tooling on the host machine.
+This template assumes a containerized workflow. The stack runs in containers (`semiont start` brings it up); the skills run in containers too. There is **no need** to install Node, the SDK, or any other tooling on the host machine.
 
-## Backend setup
+## Stack setup
 
-Before running any skill, the Semiont backend stack must be up. Two paths:
+Before running any skill, the Semiont stack must be up. Two paths:
 
 ### Local: `semiont start`
 
@@ -105,7 +105,7 @@ semiont useradd --email admin@example.com --admin
 
 ### Codespaces
 
-Open the repo in a Codespace — `post-create.sh` pulls the stack's images, `post-start.sh` brings it up. No account is created — make the first admin with `docker compose -f .semiont/compose/backend.yml exec backend semiont-useradd --email you@example.com --generate-password --admin`. Forward the port: `gh codespace ports forward 4000:4000`.
+Open the repo in a Codespace — `post-create.sh` pulls the stack's images, `post-start.sh` brings it up. No account is created — make the first admin with `docker compose -f .semiont/compose/backend.yml exec gateway semiont-useradd --email you@example.com --generate-password --admin`. Forward the port: `gh codespace ports forward 4000:4000`.
 
 ## Parameterization and interactivity
 

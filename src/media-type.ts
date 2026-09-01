@@ -16,3 +16,20 @@ export function getMediaType(r: ResourceDescriptor): string | undefined {
       : [];
   return reps[0]?.mediaType;
 }
+
+/**
+ * A resource's storage URI, or undefined when it has no stored bytes.
+ *
+ * Same normalization as getMediaType, and for the same reason: `storageUri`
+ * lives on the Representation. The top-level field was removed in 0.5.29
+ * (STORAGE-URI-ONE-HOME), so `r.storageUri` now reads undefined at runtime —
+ * silently, since a cast will happily accept it.
+ */
+export function storageUriOf(r: ResourceDescriptor): string | undefined {
+  const reps = Array.isArray(r.representations)
+    ? r.representations
+    : r.representations
+      ? [r.representations]
+      : [];
+  return reps[0]?.storageUri;
+}
