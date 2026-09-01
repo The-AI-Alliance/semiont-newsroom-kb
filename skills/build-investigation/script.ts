@@ -12,6 +12,7 @@ import {
   type GatheredContext,
 } from '@semiont/sdk';
 import { confirm, close as closeInteractive } from '../../src/interactive.js';
+import { storageUriOf } from '../../src/media-type.js';
 
 const INVESTIGATION_INSTRUCTIONS =
   process.env.INVESTIGATION_INSTRUCTIONS ??
@@ -56,7 +57,7 @@ async function main(): Promise<void> {
       const types: string[] = r.entityTypes ?? [];
       if (!types.includes('Claim')) return false;
       if (!scope) return true;
-      const uri = (r.storageUri ?? '') as string;
+      const uri = storageUriOf(r) ?? '';
       return uri.includes(`/${scope}/`) || uri.includes(`/generated/`);
     });
 
