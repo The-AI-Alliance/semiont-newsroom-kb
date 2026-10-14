@@ -10,6 +10,7 @@ import {
   InMemorySessionStorage,
   httpKb,
   getAnnotationExactText,
+  getBodySource,
   getEntityTypes,
   type AnnotationId,
   type ResourceId,
@@ -72,9 +73,7 @@ async function main(): Promise<void> {
         const isOrg = tags.includes('Organization');
         const isAgency = tags.includes('Agency');
         if (!isOrg && !isAgency) continue;
-        const alreadyBound = bodies.some(
-          (b) => b.type === 'SpecificResource' && b.purpose === 'linking',
-        );
+        const alreadyBound = getBodySource(ann.body) !== null;
         const text = getAnnotationExactText(ann);
         orgAnnos.push({
           rId,
