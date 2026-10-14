@@ -18,16 +18,16 @@ If you're an AI assistant working in this repo, this file is your orientation. T
 | Skill | What it does | New SDK verbs |
 |---|---|---|
 | [`ingest-corpus`](skills/ingest-corpus/) | Walk the repo, declare entity-type vocabulary, create one resource per file | `frame.addEntityTypes`, `yield.resource` |
-| [`mark-people-and-orgs`](skills/mark-people-and-orgs/) | Detect Person, Organization, Agency, Document, Date, MonetaryValue, Topic spans | `mark.assist` (linking) |
-| [`tag-source-type`](skills/tag-source-type/) | Classify each claim/quote by source type | `mark.assist` (linking + interim entity-type vocabulary; will migrate to registered tag schema) |
-| [`canonicalize-people`](skills/canonicalize-people/) | Promote Person mentions to canonical Person resources via Wikidata grounding | `+ match.search`, `+ yield.fromContext`, `+ bind.body` |
+| [`mark-people-and-orgs`](skills/mark-people-and-orgs/) | Detect Person, Organization, Agency, Document, Date, MonetaryValue, Topic spans | `mark.delegate` (linking) |
+| [`tag-source-type`](skills/tag-source-type/) | Classify each claim/quote by source type | `mark.delegate` (linking + interim entity-type vocabulary; will migrate to registered tag schema) |
+| [`canonicalize-people`](skills/canonicalize-people/) | Promote Person mentions to canonical Person resources via Wikidata grounding | `+ match.search`, `+ yield.delegate`, `+ bind.body` |
 | [`canonicalize-orgs`](skills/canonicalize-orgs/) | Promote Organization mentions to canonical Organization resources | same shape as canonicalize-people |
-| [`extract-claims`](skills/extract-claims/) | Tag each factual assertion; synthesize Claim resources | `+ yield.fromContext` |
+| [`extract-claims`](skills/extract-claims/) | Tag each factual assertion; synthesize Claim resources | `+ yield.delegate` |
 | [`bind-claim-to-source`](skills/bind-claim-to-source/) | Resolve and bind each Claim to its supporting source span | `+ gather.annotation`, `+ bind.body` |
-| [`build-source-graph`](skills/build-source-graph/) | Wire Person × Statement × Topic edges; tag relationships | `+ mark.annotation` |
-| [`comment-action-items`](skills/comment-action-items/) | Surface follow-up questions, missing corroboration, redaction signals | `mark.assist` (commenting) |
+| [`build-source-graph`](skills/build-source-graph/) | Record how sources' claims relate, each a Relationship resource its passage is bound to | `yield.resource`, `mark.annotation`, `bind.body` |
+| [`comment-action-items`](skills/comment-action-items/) | Surface follow-up questions, missing corroboration, redaction signals | `mark.delegate` (commenting) |
 | [`balance-audit`](skills/balance-audit/) | Per-topic named-vs-anonymous source distribution | `browse.annotations`, `yield.resource` |
-| [`fact-check`](skills/fact-check/) | Per-Claim aggregate with all supporting/contradicting sources | `+ gather.annotation`, `+ yield.fromContext` |
+| [`fact-check`](skills/fact-check/) | Per-Claim aggregate with all supporting/contradicting sources | `+ gather.annotation`, `+ yield.delegate` |
 | [`build-investigation`](skills/build-investigation/) | Top-level investigation aggregate — narrative synthesis | full pipeline composition |
 | [`draft-with-citations`](skills/draft-with-citations/) | Article scaffold with inline fact-check links | full pipeline composition |
 
@@ -71,7 +71,7 @@ The seeded corpus contains an investigation where a fictional agency policy is c
 5. `canonicalize-orgs` → Organization / Agency resources.
 6. `extract-claims` → Claim resources for every factual assertion.
 7. `bind-claim-to-source` → each Claim bound to its supporting source span (named or anonymous).
-8. `build-source-graph` → Person × Statement × Topic edges.
+8. `build-source-graph` → relationships between sources' claims, as the assistant decides them.
 9. `fact-check` → per-Claim aggregates listing supporting and contradicting sources.
 10. `balance-audit` → per-topic named-vs-anonymous distribution.
 11. `build-investigation` → top-level narrative synthesis citing every Claim, Source, Document.
@@ -80,7 +80,7 @@ The `Investigation` is the demonstration — a queryable artifact that shows *wh
 
 ## Why source-type is implemented as entity-type vocabulary, not a registered tag schema
 
-Tag schemas registered upstream (`legal-irac`, `scientific-imrad`, `argument-toulmin`) are the architecturally correct fit for source-type — Named / Anonymous / Document / Observation are exactly the structured-tagging shape IRAC and IMRAD are. Until a `journalism-source` schema lands in `packages/ontology/src/tag-schemas.ts`, this KB uses entity-type vocabulary (`SourceType_Named`, etc.) plus `mark.assist` linking. The query shape is identical; the only difference is registration.
+Tag schemas registered upstream (`legal-irac`, `scientific-imrad`, `argument-toulmin`) are the architecturally correct fit for source-type — Named / Anonymous / Document / Observation are exactly the structured-tagging shape IRAC and IMRAD are. Until a `journalism-source` schema lands in `packages/ontology/src/tag-schemas.ts`, this KB uses entity-type vocabulary (`SourceType_Named`, etc.) plus `mark.delegate` linking. The query shape is identical; the only difference is registration.
 
 ## Working in containers — do not install npm packages on the host
 
@@ -115,18 +115,18 @@ semiont useradd --repo The-AI-Alliance/semiont-newsroom-kb --email you@example.c
 
 ## Parameterization and interactivity
 
-Skills are parameterized in three tiers — environment configuration (`SEMIONT_API_URL` / `SEMIONT_USER_EMAIL` / `SEMIONT_USER_PASSWORD`), skill-invocation parameters (per-skill env vars and CLI args), and tier-3 interactive checkpoints (off by default; enable with `--interactive` or `SEMIONT_INTERACTIVE=1`).
+Skills are parameterized in three tiers — environment configuration (`SEMIONT_API_URL`; a skill signs in by the device grant, and [Signing in](https://github.com/The-AI-Alliance/semiont/blob/main/docs/builder/SIGN-IN.md) has the other ways), skill-invocation parameters (per-skill env vars and CLI args), and tier-3 interactive checkpoints (off by default; enable with `--interactive` or `SEMIONT_INTERACTIVE=1`).
 
 ## A note on PDFs
 
-`mark.assist` operates on `text/markdown` and `text/plain`. PDFs are ingested by skill 1 as `application/pdf` resources — they're cataloged and visible in the KB but downstream `mark-*` skills skip them.
+`mark.delegate` operates on `text/markdown` and `text/plain`. PDFs are ingested by skill 1 as `application/pdf` resources — they're cataloged and visible in the KB but downstream `mark-*` skills skip them.
 
 ## Background reading
 
 | Where | What |
 |---|---|
 | [`@semiont/sdk` README](https://github.com/The-AI-Alliance/semiont/tree/main/packages/sdk) | The TypeScript surface — eight verbs (frame, yield, mark, match, bind, gather, browse, beckon) plus admin/auth/job. |
-| [SDK Usage docs](https://github.com/The-AI-Alliance/semiont/tree/main/packages/sdk/docs) | Cache semantics, reactive model, state units, error handling. |
-| [Semiont protocol skills](https://github.com/The-AI-Alliance/semiont/tree/main/docs/protocol/skills) | Reference skill packs. |
+| [SDK Usage docs](https://github.com/The-AI-Alliance/semiont/blob/main/docs/builder/Usage.md) | Cache semantics, reactive model, state units, error handling. |
+| [Semiont protocol skills](https://github.com/The-AI-Alliance/semiont/tree/main/docs/builder/skills) | Reference skill packs. |
 | [Wikidata](https://www.wikidata.org/) | Canonical authority `canonicalize-people` grounds against. |
 | [SPJ Code of Ethics](https://www.spj.org/ethicscode.asp) | Source-handling principles that inform the source-type vocabulary. |

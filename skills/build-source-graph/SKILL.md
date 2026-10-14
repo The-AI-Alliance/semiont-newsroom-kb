@@ -1,18 +1,27 @@
 ---
 name: build-source-graph
-description: Wire the Person × Statement × Topic graph; extract inter-source relationships (corroborates, contradicts, supersedes) via a relationship-extraction pass.
+description: Record how sources' claims relate (corroborates, contradicts, supersedes, derived-from). Each relationship is a Relationship resource its passage is bound to. The assistant reads the passage and decides; no job extracts relationships.
 disable-model-invocation: false
 user-invocable: true
-allowed-tools: Bash, Read
+allowed-tools: Bash, Read, Write
 ---
 
-You are building the relationship layer of the source graph. Pass 1 already wired Claim → Source via `bind-claim-to-source`; this skill now extracts inter-source relationships across the corpus.
+You are building the relationship layer of the source graph. `bind-claim-to-source` already wired Claim → Source; this skill records how one source's claim relates to another's.
 
 ## What it does
 
-For every markdown resource, calls `mark.assist(rId, 'linking', { instructions: RELATIONSHIP_INSTRUCTIONS })`. The model identifies passages where one source corroborates, contradicts, or supersedes another and tags the span with a relationship label.
+The stack's worker detects mentions of entity types. It has no job that extracts relationships, and a linking job takes no instructions. Deciding that a passage relates two sources is the judgment this skill supplies: yours, reading the passage as the assistant, or the user's.
 
-| Relationship | Tagged when |
+The method, and the script that records what you decided, are the [`semiont-relate`](https://github.com/The-AI-Alliance/semiont/tree/main/docs/builder/skills/semiont-relate) skill's. A relationship is a resource of its own:
+
+- A **Relationship resource** for each related pair, with entity types `['Relationship', '<type>']`. Its text names the two ends, and a reference on each name is bound to that resource.
+- A **reference on the passage** that establishes the relationship, bound to the Relationship resource and tagged with the relationship's type.
+
+## This corpus's relationship types
+
+Declare these with `frame.addEntityTypes` before recording any (alongside `Relationship`):
+
+| Relationship | Recorded when |
 |---|---|
 | `corroborates` | Source A's claim is independently confirmed by source B |
 | `contradicts` | Source A's claim is denied / rebutted by source B |
@@ -21,17 +30,9 @@ For every markdown resource, calls `mark.assist(rId, 'linking', { instructions: 
 
 ## SDK verbs
 
-`browse.resources`, `mark.assist` (linking with custom instructions).
+- `browse.resources`, `browse.annotations`, `frame.addEntityTypes`, `yield.resource`, `mark.annotation`, `bind.body`, `gather.referencedBy`
 
-## Run it
+## Guidance for the AI assistant
 
-```bash
-HOST_ADDR=$(container run --rm node:24-alpine sh -c "ip route | awk '/default/{print \$3}'" 2>/dev/null | tr -d '[:space:]')
-
-container run --rm -v "$(pwd):/work" -w /work \
-  -e SEMIONT_API_URL=http://${HOST_ADDR}:4000 \
-  -e SEMIONT_USER_EMAIL=admin@example.com \
-  -e SEMIONT_USER_PASSWORD=<your-password> \
-  node:24-alpine \
-  sh -c 'npm install --silent --no-fund @semiont/sdk tsx && npx tsx skills/build-source-graph/script.ts'
-```
+- **Record only what the language supports.** A relationship is recorded where a passage establishes it, not where two sources merely appear together.
+- **One Relationship resource per related pair and type.** A second passage that establishes the same relationship gets a reference bound to the existing resource.
