@@ -12,12 +12,12 @@ You are turning every factual assertion into a queryable Claim resource — the 
 
 1. For every markdown resource, browses source-type-tagged annotations from `tag-source-type`.
 2. For each annotation, calls `gather.annotation` to pull surrounding context.
-3. Calls `yield.fromContext` to synthesize a Claim resource with body fields (assertion, subject, supporting language, source-type, source-text, scope).
+3. Calls `yield.delegate` to synthesize a Claim resource with body fields (assertion, subject, supporting language, source-type, source-text, scope).
 4. Binds the source annotation to the new Claim resource.
 
 ## SDK verbs
 
-`browse.resources`, `browse.annotations`, `gather.annotation`, `yield.fromContext`, `bind.body`.
+`browse.resources`, `browse.annotations`, `gather.annotation`, `yield.delegate`, `bind.body`.
 
 ## Tier-2 parameters
 
@@ -33,11 +33,11 @@ HOST_ADDR=$(container run --rm node:24-alpine sh -c "ip route | awk '/default/{p
 
 container run --rm -v "$(pwd):/work" -w /work \
   -e SEMIONT_API_URL=http://${HOST_ADDR}:4000 \
-  -e SEMIONT_USER_EMAIL=admin@example.com \
-  -e SEMIONT_USER_PASSWORD=<your-password> \
   node:24-alpine \
-  sh -c 'npm install --silent --no-fund @semiont/sdk tsx && npx tsx skills/extract-claims/script.ts'
+  sh -c 'npm ci --no-audit --no-fund && npx tsx skills/extract-claims/script.ts'
 ```
+
+The script prints an address: open it in a browser and approve the sign-in. [Signing in](https://github.com/The-AI-Alliance/semiont/blob/main/docs/builder/SIGN-IN.md) has the other ways a script can sign in.
 
 ## Guidance for the AI assistant
 
