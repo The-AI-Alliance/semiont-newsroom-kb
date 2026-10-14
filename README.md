@@ -28,7 +28,7 @@ This repo ships twelve skills that build a layered investigation KB on top of th
 | [`canonicalize-orgs`](skills/canonicalize-orgs/SKILL.md) | Promote Organization / Agency mentions to canonical Organization resources. |
 | [`extract-claims`](skills/extract-claims/SKILL.md) | Tag every factual assertion in the corpus; synthesize per-claim Claim resources with structured fields. |
 | [`bind-claim-to-source`](skills/bind-claim-to-source/SKILL.md) | For each Claim, resolve its supporting source (Person / Document / Observation) and bind the edge. |
-| [`build-source-graph`](skills/build-source-graph/SKILL.md) | Wire Person × Statement × Topic edges; tag inter-source relationships (corroborates / contradicts / supersedes). |
+| [`build-source-graph`](skills/build-source-graph/SKILL.md) | Record how sources' claims relate (corroborates / contradicts / supersedes), as the assistant decides it. |
 | [`comment-action-items`](skills/comment-action-items/SKILL.md) | Surface follow-up questions, missing corroboration, redacted-section signals across the corpus. |
 | [`balance-audit`](skills/balance-audit/SKILL.md) | Aggregate the corpus by topic; compare named-vs-anonymous source distribution per topic; flag imbalances. |
 | [`fact-check`](skills/fact-check/SKILL.md) | Per-Claim aggregate listing every supporting and contradicting source with provenance edges. |

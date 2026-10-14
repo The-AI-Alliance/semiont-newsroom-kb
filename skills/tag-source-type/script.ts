@@ -1,7 +1,7 @@
 /**
  * tag-source-type — classify each claim by source type.
  *
- * mark.assist with motivation 'linking' and four entity types
+ * mark.delegate with motivation 'linking' and four entity types
  * (SourceType_Named / SourceType_Anonymous / SourceType_Document /
  *  SourceType_Observation).
  *
@@ -11,9 +11,8 @@
  * Usage: tsx skills/tag-source-type/script.ts [<resourceId>] [--interactive]
  */
 
-import { SemiontSession, InMemorySessionStorage, entityType, resourceId as ridBrand, type KbTarget, type ResourceId } from '@semiont/sdk';
+import { SemiontSession, InMemorySessionStorage, httpKb, entityType, resourceId as ridBrand, type ResourceId } from '@semiont/sdk';
 import { confirm, close as closeInteractive } from '../../src/interactive.js';
-import { createdCount } from '../../src/mark-result.js';
 import { getMediaType } from '../../src/media-type.js';
 
 const SOURCE_ENTITY_TYPES = [
@@ -23,33 +22,25 @@ const SOURCE_ENTITY_TYPES = [
   entityType('SourceType_Observation'),
 ];
 
-const SOURCE_INSTRUCTIONS =
-  process.env.SOURCE_INSTRUCTIONS ??
-  `Identify passages in this document that make factual assertions and tag each with the source
-type that supports the assertion. Use exactly one of:
-  - SourceType_Named: source is named on the record (look for "X said", "X told the reporter", "according to X")
-  - SourceType_Anonymous: source is described but not named ("a senior official", "person familiar")
-  - SourceType_Document: source is a document (memo, filing, FOIA release, public statement)
-  - SourceType_Observation: source is the reporter's first-hand observation
-Tag the span where the assertion is made — typically a sentence or short paragraph. Do not tag
-attribution-only language (the "according to X" itself); tag the assertion that the attribution supports.`;
-
-
 async function main(): Promise<void> {
   const args = process.argv.slice(2).filter((a) => !a.startsWith('-'));
   const explicitResourceId = args[0];
 
-  const baseUrl = process.env.SEMIONT_API_URL ?? 'http://localhost:4000';
-  const email = process.env.SEMIONT_USER_EMAIL!;
-  const password = process.env.SEMIONT_USER_PASSWORD!;
-  const u = new URL(baseUrl);
-  const kb: KbTarget = {
-    id: 'newsroom-tag-source-type',
-    label: 'newsroom tag-source-type',
-    email,
-    endpoint: { kind: 'http', host: u.hostname, port: Number(u.port) || 4000, protocol: u.protocol.replace(':', '') as 'http' | 'https' },
-  };
-  const session = await SemiontSession.signInHttp({ kb, storage: new InMemorySessionStorage(), baseUrl, email, password });
+  const gateway = new URL(process.env.SEMIONT_API_URL ?? 'http://localhost:4000');
+  const session = await SemiontSession.signInDevice({
+    kb: httpKb({
+      id: 'newsroom-tag-source-type',
+      label: 'newsroom tag-source-type',
+      host: gateway.hostname,
+      port: Number(gateway.port) || 4000,
+      protocol: gateway.protocol === 'https:' ? 'https' : 'http',
+    }),
+    storage: new InMemorySessionStorage(),
+    onCode: ({ verificationUri, verificationUriComplete, userCode }) => {
+      console.error(`Approve this script at ${verificationUriComplete ?? verificationUri}`);
+      if (!verificationUriComplete) console.error(`Code: ${userCode}`);
+    },
+  });
   const semiont = session.client;
 
   try {
@@ -63,7 +54,7 @@ async function main(): Promise<void> {
           const mt = getMediaType(r);
           return mt === 'text/markdown' || mt === 'text/plain';
         })
-        .map((r) => ridBrand(r['@id']));
+        .map((r) => r['@id']);
     }
 
     if (targets.length === 0) {
@@ -81,11 +72,11 @@ async function main(): Promise<void> {
 
     let total = 0;
     for (const rId of targets) {
-      const progress = await semiont.mark.assist(rId, 'linking', {
+      const done = await semiont.mark.delegate(rId, {
+        motivation: 'linking',
         entityTypes: SOURCE_ENTITY_TYPES,
-        instructions: SOURCE_INSTRUCTIONS,
       });
-      const n = createdCount(progress);
+      const n = done.result && 'persisted' in done.result ? done.result.persisted : 0;
       total += n;
       console.log(`  ${rId}: ${n} source-type annotations`);
     }

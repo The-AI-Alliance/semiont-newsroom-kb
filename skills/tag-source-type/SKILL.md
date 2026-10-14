@@ -10,7 +10,7 @@ You are tagging every claim or quote in the corpus by the type of source support
 
 ## What it does
 
-For every markdown / text resource, calls `mark.assist(resourceId, 'linking', { entityTypes: SOURCE_TYPES })`. The model identifies passages making factual assertions and tags each with one of:
+For every markdown / text resource, calls `mark.delegate(resourceId, { motivation: 'linking', entityTypes: SOURCE_TYPES })`. The model identifies passages making factual assertions and tags each with one of:
 
 | Source type | Entity type | Description |
 |---|---|---|
@@ -21,12 +21,12 @@ For every markdown / text resource, calls `mark.assist(resourceId, 'linking', { 
 
 ## Why entity-type vocabulary instead of a registered tag schema?
 
-Source-type would naturally be a `journalism-source` registered tag schema (parallel to `legal-irac`, `scientific-imrad`, `argument-toulmin`). Until that schema lands in `packages/ontology/src/tag-schemas.ts`, this skill uses entity-type vocabulary plus `mark.assist` linking. Same query shape; only registration differs.
+Source-type would naturally be a `journalism-source` registered tag schema (parallel to `legal-irac`, `scientific-imrad`, `argument-toulmin`). Until that schema lands in `packages/ontology/src/tag-schemas.ts`, this skill uses entity-type vocabulary plus `mark.delegate` linking. Same query shape; only registration differs.
 
 ## SDK verbs
 
 - `browse.resources`
-- `mark.assist` (linking)
+- `mark.delegate` (linking)
 
 ## Run it
 
@@ -35,11 +35,11 @@ HOST_ADDR=$(container run --rm node:24-alpine sh -c "ip route | awk '/default/{p
 
 container run --rm -v "$(pwd):/work" -w /work \
   -e SEMIONT_API_URL=http://${HOST_ADDR}:4000 \
-  -e SEMIONT_USER_EMAIL=admin@example.com \
-  -e SEMIONT_USER_PASSWORD=<your-password> \
   node:24-alpine \
-  sh -c 'npm install --silent --no-fund @semiont/sdk tsx && npx tsx skills/tag-source-type/script.ts'
+  sh -c 'npm ci --no-audit --no-fund && npx tsx skills/tag-source-type/script.ts'
 ```
+
+The script prints an address: open it in a browser and approve the sign-in. [Signing in](https://github.com/The-AI-Alliance/semiont/blob/main/docs/builder/SIGN-IN.md) has the other ways a script can sign in.
 
 ## Output
 
