@@ -8,7 +8,7 @@
 import {
   SemiontSession,
   InMemorySessionStorage,
-  httpKb,
+  type KbTarget,
   resourceId as ridBrand,
   type GatheredContext,
 } from '@semiont/sdk';
@@ -42,22 +42,18 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const gateway = new URL(process.env.SEMIONT_API_URL ?? 'http://localhost:4000');
-  const opened = await SemiontSession.signInDevice({
-    kb: httpKb({
-      id: 'newsroom-draft-with-citations',
-      label: 'newsroom draft-with-citations',
-      host: gateway.hostname,
-      port: Number(gateway.port) || 4000,
-      protocol: gateway.protocol === 'https:' ? 'https' : 'http',
-    }),
-    storage: new InMemorySessionStorage(),
-    onCode: ({ verificationUri, verificationUriComplete, userCode }) => {
-      console.error(`Approve this script at ${verificationUriComplete ?? verificationUri}`);
-      if (!verificationUriComplete) console.error(`Code: ${userCode}`);
-    },
-  });
-  const semiont = opened.session.client;
+  const baseUrl = process.env.SEMIONT_API_URL ?? 'http://localhost:4000';
+  const email = process.env.SEMIONT_USER_EMAIL!;
+  const password = process.env.SEMIONT_USER_PASSWORD!;
+  const u = new URL(baseUrl);
+  const kb: KbTarget = {
+    id: 'newsroom-draft-with-citations',
+    label: 'newsroom draft-with-citations',
+    email,
+    endpoint: { kind: 'http', host: u.hostname, port: Number(u.port) || 4000, protocol: u.protocol.replace(':', '') as 'http' | 'https' },
+  };
+  const session = await SemiontSession.signInHttp({ kb, storage: new InMemorySessionStorage(), baseUrl, email, password });
+  const semiont = session.client;
 
   try {
     const all = (await semiont.browse.resources({ limit: 2000 }).fresh()).resources;
@@ -106,24 +102,23 @@ async function main(): Promise<void> {
       `## Available FactChecks\n\n${manifest}\n\n` +
       `## Source Investigation\n\n- ${investigation.name} (\`${investigation['@id']}\`)\n\n---\n\n`;
 
-    const yieldEvent = await semiont.yield.delegate({
-      context,
+    const yieldEvent = await semiont.yield.fromContext(context, {
       title: `Draft: ${investigation.name}`,
       storageUri: `file://generated/draft-${slugify(investigation.name)}.md`,
       entityTypes: ['DraftArticle', 'Aggregate'],
       prompt: `${DRAFT_INSTRUCTIONS}\n\nBegin the body with this preamble verbatim:\n\n${prepend}`,
     });
-    if (!yieldEvent.result || !('resourceId' in yieldEvent.result)) {
-      console.error(`the generation made no resource`);
+    if (yieldEvent.kind !== 'complete') {
+      console.error(`yield.fromContext did not complete: ${yieldEvent.kind}`);
       closeInteractive();
       return;
     }
-    const resourceId = yieldEvent.result && 'resourceId' in yieldEvent.result ? yieldEvent.result.resourceId : undefined;
+    const resourceId = (yieldEvent.data.result as { resourceId?: string } | undefined)?.resourceId;
     console.log(`\n✓ DraftArticle synthesized: ${resourceId}`);
 
     closeInteractive();
   } finally {
-    opened.dispose();
+    await session.dispose();
   }
 }
 
